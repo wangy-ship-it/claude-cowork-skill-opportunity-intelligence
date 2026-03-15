@@ -1,12 +1,12 @@
 ---
 name: job-search
 description: |
-  **Personal CRM + Opportunity Intelligence System (v15)**: Three-domain platform — Opportunity Discovery (4-channel search, signal extraction, Fit/Opportunity/IP scoring, APPLY NOW/NETWORK FIRST/HOLD/SKIP gates), Relationship CRM (contact tracking, 8-state networking pipeline DISCOVERED→CLOSED, automated follow-ups, strength transitions), Interview Pipeline (stage tracking, prep tasks, thank-you notes). Discovery Mode (weekly) and Networking Mode (daily). Learns from cluster and channel performance.
+  **Personal CRM + Opportunity Intelligence System (v16.11)**: Three-domain platform — Opportunity Discovery (4-channel search, multi-ATS API network, ATS probe protocol, URL pre-triage, URL liveness, Fit/Opportunity/IP scoring, APPLY NOW/NETWORK FIRST/HOLD/BORDERLINE/SKIP gates), Relationship CRM (8-state networking pipeline DISCOVERED→CLOSED, follow-ups), Interview Pipeline (stage tracking, prep). Discovery and Networking modes. ATS registry grows automatically. Includes false-negative risk assessment, Borderline Review, company title mapping, Google application budget guardrail, Ch3 ATS priority ordering, context efficiency, Google URL freshness heuristic.
 
   Trigger when user mentions "jobs", "careers", "openings", "roles", "positions", "hiring", "apply", "find roles matching my resume", "daily job search", "run my job search", "find referrals", "who should I network with", "follow up", "check my pipeline", "interview prep", "networking update", "any follow-ups due", or "run networking mode".
 ---
 
-# Personal CRM + Opportunity Intelligence System v15.0 — Execution Guide
+# Personal CRM + Opportunity Intelligence System v16.11 — Execution Guide
 
 > **Design Philosophy**: This agent operates as a personal opportunity intelligence and networking management platform — not just a job discovery engine. It manages relationships, tracks interview pipelines, and discovers opportunities across three integrated domains.
 
@@ -37,9 +37,13 @@ This SKILL.md is the execution backbone. Detailed rubrics and formats live in re
 - `references/decision_engine.md` — Reasoning requirements for every recommendation. Read before Phase 5.
 - `references/guardrails.md` — Hard constraints preventing wasteful strategies. Read at pipeline start.
 - `references/learning_loop.md` — Channel performance tracking, opportunity cluster learning. Read before Phase 1 and Phase 10.
-- `references/output-formats.md` — CSV 26-column schema, Action Pack format, Summary Report template, Google Sheet write process, tailoring tiers, Relationship Table, Interview Pipeline Dashboard
+- `references/output-formats.md` — CSV 27-column schema, Action Pack format, Summary Report template, Google Sheet write process, tailoring tiers, Relationship Table, Interview Pipeline Dashboard
 - `references/career-sites.md` — Company-specific navigation tips, ATS patterns, LinkedIn/Boolean search templates
 - `references/linkedin-browser.md` — **NEW in v15** — Chrome browser automation for LinkedIn Jobs (Channel 2) and Recruiter/HM Posts (Channel 4). Read before Phase 3 when browser tools are available.
+- `references/linkedin-company-filters.md` — **NEW in v16.6** — LinkedIn `f_C` company ID registry for targeted job board searches. Maps companies to their verified LinkedIn IDs. Read before Phase 3 Channel 2 company-filtered searches.
+- `references/keyword_engine.md` — **NEW in v16.11** — Full Phase 2B keyword matrix construction, company-specific title vocabulary (v16.7), global title expansion map (v16.11), two-query-type system. Read before Phase 2B.
+- `references/channel_search.md` — **NEW in v16.11** — Complete Phase 3 multi-channel search execution (Ch1-4), Chrome MCP setup, ATS API details, seed registry, probe protocol, adaptive expansion, Channel Completion Gate. Read before Phase 3.
+- `references/url_triage.md` — **NEW in v16.11** — Phases 3.5-3.7: URL pre-triage, early liveness sampling, cross-run dedup gate, Google URL freshness heuristic. Read before Phase 3.5.
 
 ---
 
@@ -82,24 +86,74 @@ RUN CHECKLIST — {date} — Mode: {DISCOVERY / NETWORKING} × {QUICK_TRIAGE / F
 [ ] PHASE 2A: Build search queue
     → OUTPUT: Search queue displayed with Tier 1/2/3 breakdown (see template below)
 
-[ ] PHASE 2B: Keyword Intelligence Engine
+[ ] PHASE 2B: Keyword Intelligence Engine (Enhanced in v16.11)
     → OUTPUT: Keyword matrix printed (proven + discovery keywords with confidence scores)
+    → OUTPUT: Company keyword overrides printed (from title_vocabulary intelligence)
+    → OUTPUT: Title expansion map loaded — adjacent titles added to Discovery tier (v16.11)
+    → PERSIST: Save keyword matrix to {workspace}/keyword_matrix_run{N}.md (v16.11 — survives context continuations)
     → BLOCKING: Phase 3 cannot start without the keyword matrix
 
 [ ] PHASE 2C: Market Health Check
     → OUTPUT: Market health assessment printed (url_404_rate, trend, responsive actions)
     → If tightening detected: lower NETWORK FIRST threshold (Fit ≥ 65), increase Tier 3 by 2, propose strategy shift
 
-[ ] PHASE 2D: Company Intelligence
-    → OUTPUT: Company health status for each company in queue
+[ ] PHASE 2D: Company Intelligence (Enhanced in v16.7)
+    → Step 1: Intelligence staleness check (0-3d fresh / 4-7d spot-check / 8+d full refresh)
+    → Step 2: Career site spot-check for aging/stale companies
+    → Step 3: Referral company override (always full refresh)
+    → Step 4: Team-level freeze resolution for partial_freeze companies (v16.7)
+    → OUTPUT: Company health status for each company in queue + staleness actions taken
+    → OUTPUT: Team-level status for any partial_freeze companies
 
-[ ] PHASE 3: Multi-Channel Search (ALL 4 channels required for ALL modes)
+[ ] PHASE 2E: Context Budget Planning (NEW in v16.11) ← BLOCKING GATE
+    → Step 1: Estimate context cost — count companies in search queue × avg JD tokens per company
+      - Rule of thumb: each company = ~2000-4000 tokens (career site nav + JD reads)
+      - Each ATS API query = ~500-1000 tokens; each full JD read = ~1500-3000 tokens
+      - FULL_ANALYSIS with 20+ companies typically needs 80K+ tokens
+    → Step 2: If estimated cost > 60% of remaining context → activate EFFICIENCY MODE:
+      - Ch3: Query all 4 ATS platforms for title matches FIRST (lightweight), collect URLs only
+      - Ch3: Deep JD reads only for title-matching roles (skip full JD for non-matches)
+      - Ch1: Shallow reads for companies with >2 roles (read first role fully, skim rest for differentiation)
+      - HOLD candidates: Shallow JD read (title + requirements + seniority only, skip company description + benefits)
+      - Phase 4.0 Metadata Pre-Filter: Apply AGGRESSIVELY — skip anything with >1 concern signal
+    → Step 3: If estimated cost < 60% → proceed normally with full reads
+    → OUTPUT: Context budget assessment — {NORMAL / EFFICIENCY MODE} — estimated {X}% context usage
+    → BLOCKING: Phase 3 CANNOT start without this assessment printed. Run 16 hit context limits because this phase was skipped.
+    → ENFORCEMENT: If EFFICIENCY MODE activated, print "⚠ EFFICIENCY MODE ACTIVE" at the top of Phase 3, 4, and 4.5 as a reminder to use shallow reads
+
+[ ] PHASE 3: Multi-Channel Search (Ch1-3 required; Ch4 requires browser)
     → Channel 1 (Career Sites): [ ] completed — {X} roles found
-    → Channel 2 (LinkedIn Jobs): [ ] completed — {X} roles found
-    → Channel 3 (Boolean/ATS): [ ] completed — {X} roles found
-    → Channel 4 (LinkedIn Recruiter/HM Posts): [ ] completed — {X} roles found
+    → Ch1 Adaptive Expansion (v16.7): [ ] {X} companies triggered fallback keywords — {Y} new roles found
+    → Channel 2 (LinkedIn Jobs): [ ] completed — {X} roles found (title: {X}, tool: {X}, freshness: {X})
+    → Ch3 PRIORITY ORDER (v16.11): Query Lever + SmartRecruiters FIRST (most likely to be skipped in context-constrained runs), THEN Ashby, THEN Greenhouse (largest registry, can be truncated if context runs low)
+    → Channel 3 (ATS Boards): [ ] completed — {X} roles found (Greenhouse: {X}, Ashby: {X}, Lever: {X}, SmartRecr: {X}, site-search: {X})
+    → ATS Probes: [ ] {X} new companies probed — {X} added to registry
+    → Channel 4 (Recruiter/HM Posts): [ ] completed/skipped — {X} roles found | browser: {YES/NO}
     → Cross-channel dedup: [ ] completed — {X} unique roles after dedup
-    → CHANNEL COMPLETION GATE: [ ] All 4 channels attempted (print log before Phase 4)
+    → CHANNEL COMPLETION GATE: [ ] All active channels attempted (print log before Phase 3.5)
+
+[ ] PHASE 3.5: URL Pre-Triage (NEW in v16)
+    → LinkedIn ID age filter applied — {X} dropped
+    → Career site URL swaps — {X} swapped
+    → Pattern-based rejection — {X} dropped
+    → OUTPUT: {X} roles surviving → Phase 3.6
+
+[ ] PHASE 3.6: Early URL Liveness Sampling (NEW in v16.6)
+    → TRIGGER: Run if prev url_404_rate > 0.3 OR any company has freeze/migration flags
+    → Step 1: Group URLs by company, sample 1 per company
+    → Step 2: Quick liveness check (navigate + 3s wait + screenshot)
+    → Step 3: Flag EARLY_DEAD companies (deprioritize their JD reads)
+    → Step 4: Detect PLATFORM_MIGRATION signals
+    → Step 5 (NEW v16.11): Google URL Freshness Pre-Check — For ALL Google URLs found via web search (not direct career site browsing), immediately liveness-check before scoring. Google career URLs found via web search have a 75% dead rate (Run 15 data: 3 of 4 dead). If dead, DROP immediately — do not score or include in downstream phases. This saves significant context on roles that don't exist.
+    → TRIGGER: Always run for Google. Consider for any company with url_404_rate > 0.5 in last 3 runs.
+    → OUTPUT: {X} companies healthy, {Y} flagged EARLY_DEAD, {Z} migration detected
+
+[ ] PHASE 3.7: Cross-Run Dedup Gate (NEW in v16.5 — moved from Phase 7.5)
+    → Step 1: Read existing Google Sheet rows → extract Company+Title+URL for dedup
+    → Step 2: Check each role against sheet → drop exact URL matches, Company+Title matches, fuzzy matches
+    → OUTPUT: Dedup log printed — {N} dropped, {M} passed
+    → BLOCKING: Only roles passing dedup proceed to Phase 4 (JD reading)
+    → WHY HERE: Deduping before JD reading saves 40-60% of context on roles already in sheet
 
 [ ] PHASE 4: Read and evaluate JDs
     → OUTPUT: JD snapshots saved to {workspace}/jd/
@@ -114,8 +168,10 @@ RUN CHECKLIST — {date} — Mode: {DISCOVERY / NETWORKING} × {QUICK_TRIAGE / F
 [ ] PHASE 5: Score all roles (read references/scoring.md first)
     → Scores consume extracted signals, NOT raw JD text
     → OUTPUT: Three scores per role (Fit, Opportunity, Interview Prob)
+    → OUTPUT: Borderline Review applied for Bucket A roles with Fit < 70 AND Opp ≥ 75 (v16.11)
     → OUTPUT: Adaptive thresholds applied if needed
     → OUTPUT: If <5 APPLY NOW at floor → company expansion triggered: [ ] yes/no
+    → NEW Guardrail 8 (v16.11): Google Application Budget — check `company_intelligence.Google.application_budget.slots_available` before assigning APPLY NOW to any Google role. If 0 slots → force HOLD. If 1 slot → only the highest-Fit Google role can receive APPLY NOW.
 
 --- END DISCOVERY-ONLY PHASES ---
 
@@ -135,23 +191,48 @@ RUN CHECKLIST — {date} — Mode: {DISCOVERY / NETWORKING} × {QUICK_TRIAGE / F
     → 6D: Referral-finding plans for ALL NETWORK FIRST roles
     → 6E: HOLD roles get brief referral search queries and next action
     → OUTPUT: Action Pack saved to {workspace}/Job_Search_Action_Pack_{date}.md
+    → **6F (NEW v16.11): Pre-compute csv_row arrays** — build 27-value array per scored role NOW while context is fresh
+    → OUTPUT: csv_row array stored per role (used in Phase 7, 8.7, and 9)
 
-[ ] PHASE 7: Generate CSV
-    → OUTPUT: CSV saved with EXACTLY 26 columns (A-Z) per output-formats.md § Column-to-Array Position Mapping
-    → VERIFY: Each row has 26 values; Location is at index [5], Company at [6], URL at [17]
-    → URL verification pass completed
+[ ] PHASE 7: Generate CSV (uses pre-computed csv_rows from Phase 6F)
+    → OUTPUT: CSV saved with EXACTLY 27 columns (A-AA) per output-formats.md § Column-to-Array Position Mapping
+    → VERIFY: Each row has 27 values; Location is at index [5], Company at [6], URL at [17]
+    → NOTE: Phase 7 now assembles the CSV from pre-built csv_row arrays — no re-reading of scoring data needed
+
+[ ] PHASE 7.5: URL Liveness Gate (BLOCKING) — dedup moved to Phase 3.7 in v16.5
+    → Step 1: For each role, navigate to URL and confirm live job posting loads
+    → Step 2: Dead LinkedIn URLs → attempt career site replacement. No replacement → DROP role
+    → OUTPUT: Liveness log printed — {N} live, {M} replaced, {K} dropped
+    → REGENERATE: CSV and Action Pack with only surviving roles (renumber ranks)
+    → BLOCKING: Phase 8 and 9 CANNOT start until this gate passes
 
 [ ] PHASE 8: Summary Report (use EXACT template from references/output-formats.md)
+
+[ ] PHASE 8.5: Coverage Report (NEW in v16.2 — MANDATORY)
+    → OUTPUT: Search Reach printed (companies searched, APIs queried, LinkedIn mode)
+    → OUTPUT: Channel Health status for all 4 channels
+    → OUTPUT: Blind Spots list (what this run could NOT see)
+    → OUTPUT: False Negative Risk level assigned (LOW / MEDIUM / HIGH)
+    → OUTPUT: Confidence Assessment with specific recommendation if risk > LOW
     → OUTPUT: Summary displayed with ALL sections
     → OUTPUT: Relationship Table displayed (contacts, statuses, follow-ups)
     → OUTPUT: Interview Pipeline Dashboard displayed
 
+[ ] PHASE 8.7: Write Checkpoint JSON (NEW v16.11 — MANDATORY before sheet write)
+    → OUTPUT: scored_run{N}.json saved to {workspace}/
+    → Contains: all scored roles with pre-computed csv_row arrays, skipped roles, action_summary, url_liveness_log, coverage_report
+    → WHY: If Phase 9 fails, this checkpoint lets you retry the sheet write without re-doing Phases 1-8
+    → FALLBACK: If Phase 9 fails after retry, tell user "run scored_run{N}.json available — say 'sync run {N}' to retry the sheet write via job-sync skill"
+
 [ ] PHASE 9: Append to Google Sheet (read output-formats.md § Column-to-Array Mapping FIRST)
-    → PRE-WRITE: Validate each data row has exactly 26 values in correct column order
+    → SOURCE: Read csv_row arrays from scored_run{N}.json (Phase 8.7) — do NOT reconstruct from memory
+    → v16.5: Use pre-built template from scripts/sheet_writer_template.js (see scripts/inject_and_run.py)
+    → PRE-WRITE: Validate each data row has exactly 27 values in correct column order
     → PRE-WRITE: Confirm Location at [5], Company at [6], scores as integers at [9-11], URL at [17]
     → OUTPUT: {X} rows written, verified
     → POST-WRITE: Switch to sheet tab, screenshot last rows to confirm data + column alignment
     → FULL_ANALYSIS: Apply conditional formatting (see output-formats.md)
+    → ON FAILURE: Retry once. If still fails → direct user to job-sync fallback (see Phase 8.7)
 
 [ ] PHASE 10: Save preferences + update learning + update CRM + update interview pipeline
     → STOP: Read references/learning_loop.md NOW before updating anything
@@ -174,7 +255,7 @@ At run start: check if file exists.
 - **Exists** → load, proceed to Daily Check-in
 - **Missing** → run onboarding (read `references/onboarding.md`)
 
-Always save after successful run. Key fields: `last_run`, `run_counter`, `learning_history`, `keyword_wisdom`, `market_health`, `company_search_log`, `application_cooldowns`, `sourcing_performance`, `company_intelligence`, `referral_tracking`, `channel_performance`, `cluster_outcomes`, `networking_crm`, `opportunity_pipelines`, `interview_pipeline`.
+Always save after successful run. Key fields: `last_run`, `run_counter`, `learning_history`, `keyword_wisdom`, `market_health`, `company_search_log`, `application_cooldowns`, `sourcing_performance`, `company_intelligence`, `referral_tracking`, `channel_performance`, `cluster_outcomes`, `networking_crm`, `opportunity_pipelines`, `interview_pipeline`, `ats_registry`.
 
 The preferences schema includes:
 - **Core**: `candidate_profile`, `location_preferences`, `target_companies`, `google_sheet_url`, `minimum_salary_base`, `search_channels`
@@ -182,6 +263,13 @@ The preferences schema includes:
 - **Learning**: `learning_history` (with conversion_rates, hot_patterns, cold_patterns, black_hole_companies, score_adjustments, weekly_kpis, strategy_changes, channel_performance, cluster_outcomes)
 - **CRM (NEW in v14)**: `networking_crm` (with contacts[]), `opportunity_pipelines` (with per-opportunity networking state tracking) — see `references/networking_crm.md`
 - **Interview Pipeline (NEW in v14)**: `interview_pipeline[]` (with per-opportunity interview stage, prep tasks, thank-you tracking) — see `references/interview_pipeline.md`
+- **ATS Registry (NEW in v16.2)**: `ats_registry` — Maps companies to their ATS platform, API slug, and query history. Grows automatically via ATS Probe protocol. See Channel 3 for details.
+- **Title Vocabulary (NEW in v16.7)**: `company_intelligence.{company}.title_vocabulary` — Per-company keyword mapping learned from career site search results. Contains `high_yield` (keywords that return many results), `low_yield` (keywords that return near-zero), `learned_from` (run that discovered it), `last_updated`. Built automatically via adaptive keyword expansion in Ch1.
+- **Team-Level Status (NEW in v16.7)**: `company_intelligence.{company}.team_status` — Granular hiring status per team/org within a company. Replaces blanket freeze modifiers with targeted team-specific modifiers when a company is `partial_freeze`.
+- **Title Expansion Map (NEW in v16.11)**: `title_expansion_map` — Global adjacent-title families that the pipeline searches alongside primary titles. Catches market title fragmentation (e.g., "Analytics Engineering Manager" as adjacent to "Data Science Manager"). Grows automatically when runs discover high-Fit roles under new title variants.
+- **Borderline Review (NEW in v16.11, UPDATED v16.11)**: Bucket A roles with Fit < 70 and Opp ≥ 75 receive HOLD — BORDERLINE instead of plain HOLD or auto-SKIP. Expanded from Fit 58-64 to catch high-value near-misses just below NETWORK FIRST threshold (e.g., Pinterest Director Fit 68/Opp 85). See scoring.md § Borderline Review.
+- **Google Application Budget (NEW in v16.11)**: `company_intelligence.Google.application_budget` — Tracks Google's rolling application limit. Fields: `max_active_apps` (default 4), `slots_used`, `cooldown_after_rejection_days` (default 90), `active_applications[]` (with role, date, status), `last_rejection_date`, `slots_available`. Guardrail 8 enforces: if `slots_available == 0`, force HOLD with note "Google application budget exhausted — wait until {date}". Prefer NETWORK FIRST for Google roles to avoid wasting limited application slots.
+- **Networking Execution Tracking (NEW in v16.11)**: New column V ("Networked") in Google Sheet tracks whether networking outreach was actually executed for a role. This closes the feedback loop between NETWORK FIRST recommendations and actual actions taken. Phase 1 reads this column to compute networking execution rate. Schema is now 27 columns (A-AA).
 - **Performance**: `referral_tracking`, `sourcing_performance`, `channel_performance`, `cluster_outcomes`
 
 ---
@@ -199,6 +287,7 @@ Open Google Sheet, read ALL rows. Identify since last run:
 3. Stage changes
 4. Referral = TRUE rows
 5. User-edited fields (respect manual changes as feedback)
+6. New Networked = TRUE rows (v16.11) — track networking execution rate
 
 ### Step 2: Compute learning metrics
 Update in preferences:
@@ -211,6 +300,7 @@ Update in preferences:
 - **Channel performance**: Update per-channel metrics (see learning_loop.md § Channel Performance Tracking)
 - **Cluster outcomes**: Update per-cluster interview rates (see learning_loop.md § Opportunity Cluster Learning)
 - **Referral tracking**: expire 30+ day unresponsive contacts
+- **Networking execution rate (v16.11)**: Count NETWORK FIRST roles with Networked=TRUE vs total NETWORK FIRST. Target: >80%. If <50%, surface in Daily Briefing as concern.
 - **Weekly KPIs**: snapshot if 7+ days since last
 
 ### Step 3: Auto-adjust scoring
@@ -383,23 +473,19 @@ TODAY'S SEARCH QUEUE:
 
 ## PHASE 2B: Keyword Intelligence Engine ← BLOCKING GATE
 
+**STOP: Read `references/keyword_engine.md` NOW.** It contains the full keyword matrix construction process, company-specific title vocabulary (v16.7), global title expansion map (v16.11), and two-query-type system (title-based + tool-based).
+
 Phase 3 CANNOT start without the keyword matrix from this phase.
 
-1. Load `keyword_wisdom`. Compute confidence: `avg_score × log(times_used + 1)`.
-2. Rank: Proven (conf ≥ 50, used ≥ 3) → Promising (30-49 or used < 3) → Underperformers (conf < 30, used ≥ 3).
-3. Discovery budget: 1-2 NEW keywords from resume, hot patterns, interview JD language, adjacent titles.
-4. Sample-before-commit (FULL_ANALYSIS only): 3 keywords at 2 companies, score 6 results. Swap if avg < 50.
+Quick summary:
+1. Load `keyword_wisdom`, compute confidence, rank: Proven → Promising → Underperformers
+2. Load company keyword overrides from `title_vocabulary`
+3. Load `title_expansion_map` for adjacent titles
+4. Build per-company keyword plan
+5. Discovery budget: 1-2 new keywords
 
-**Display the matrix:**
-```
-KEYWORD MATRIX:
-  Proven: "{kw}" (conf {X}), ...
-  Promising: "{kw}" (conf {X}), ...
-  Discovery: "{kw}" (new), ...
-  Demoted: "{kw}" (conf {X}, skipping)
-```
-
-After run: update keyword_wisdom (times_used, avg_score, jobs_found, high_score_count, last_used, confidence).
+→ OUTPUT: Keyword matrix, company overrides, title expansion map
+→ PERSIST (NEW in v16.11): Save the keyword matrix output to `{workspace}/keyword_matrix_run{N}.md`. This ensures the matrix survives context continuations. Run 16 lost this artifact when context ran out between Phase 2B and Phase 10. The file should contain: (1) full keyword matrix with confidence scores and tiers, (2) company keyword overrides, (3) title expansion map, (4) discovery keywords attempted this run
 
 ---
 
@@ -427,71 +513,141 @@ MARKET HEALTH:
 
 ---
 
-## PHASE 2D: Company Intelligence
+## PHASE 2D: Company Intelligence ← Enhanced in v16.7
 
-For Tier 1 + Tier 2 not checked in 7+ days, **actually run web searches** for each company (don't rely on existing intelligence from preferences alone — the point is to catch NEW developments):
+### Step 1: Intelligence Staleness Check (MANDATORY — run BEFORE web searches)
+
+**Why this exists**: Run 11 had DoorDash marked "healthy" (checked 3/8) when their entire DS Analytics team had frozen hiring, and LinkedIn marked "layoff_recent" with -15 modifier when they had 312 active openings. Stale intelligence fed wrong modifiers into scoring, causing the pipeline to miss real opportunities and waste time on dead ones. This step forces a reality check.
+
+**For EVERY company in the search queue (not just 7+ days stale):**
+
+1. **Check `company_intelligence.{company}.last_checked`** — compute days since last check
+2. **Apply staleness tiers:**
+   - **0-3 days**: Fresh — trust existing intelligence, skip web search
+   - **4-7 days**: Aging — quick career site spot-check (navigate to career site, search your top keyword, check if results load and count roughly matches expectations). If results are dramatically different from last check (e.g., 0 results when last check found 10+), escalate to full refresh
+   - **8+ days**: Stale — MANDATORY full refresh (web search + career site spot-check)
+   - **Never checked or missing**: Treat as stale
+
+3. **Career site spot-check** (the key addition — takes 30 seconds per company):
+   - Navigate to the company's career site
+   - **v16.7**: Use the company's `title_vocabulary.high_yield[0]` if available, otherwise use your #1 default keyword (e.g., "data science"). This prevents false-freeze detection caused by keyword mismatch — e.g., DoorDash returns 0 for "data science" but 13 for "analytics", so using the wrong keyword would falsely trigger a freeze flag.
+   - Count results. Compare to `company_search_log.{company}.new_roles_found_last`
+   - **If results = 0 and previously found roles > 0** → likely hiring freeze or reorg. But FIRST try 1-2 alternative keywords before declaring a freeze (this is how vocabulary gets discovered). Mark `status: "partial_freeze"` or `"hiring_freeze"` only after alternatives also return 0, set `hiring_momentum_modifier` to -10 or -15
+   - **If results >> previous** → company is ramping up. Consider upgrading status to `"high_growth"`
+   - **If career site errors/redirects/restructured** → flag for platform migration check (see Phase 10)
+
+4. **Priority company override**: Companies where the candidate has a referral (`referral_tracking`) or active networking contacts ALWAYS get a full refresh regardless of age. The cost of stale intelligence is highest for warm-channel companies.
+
+### Step 2: Web Search Intelligence (existing behavior, refined)
+
+For companies requiring refresh (per Step 1), **actually run web searches** (don't rely on existing intelligence from preferences alone — the point is to catch NEW developments):
 - Web search for layoffs/freeze/growth news
-- Set status: healthy / layoff_recent / hiring_freeze / high_growth
+- Set status: healthy / layoff_recent / hiring_freeze / partial_freeze / high_growth
 - Set hiring_momentum_modifier: -15 to +10
+- Update `last_checked` to today's date
 - Update preferences
 
-FULL_ANALYSIS: Deep scan all targets. FAST_TRACK: Tier 1 only. QUICK_TRIAGE: Skip.
+**Status definitions** (expanded in v16.6):
+- `healthy` — Normal hiring, no negative signals
+- `high_growth` — Expanding aggressively, multiple new headcount signals
+- `layoff_recent` — Layoffs in past 60 days, hiring may be impacted but not frozen
+- `partial_freeze` — Some teams frozen, others still hiring (e.g., DoorDash DS Analytics freeze but Ads still active)
+- `hiring_freeze` — Company-wide freeze confirmed, skip career site search
+
+### Granular Team-Level Status ← NEW in v16.7
+
+**Why this exists**: Run 12's DoorDash diagnostic found that a blanket `partial_freeze` with `-10` modifier penalized the entire company, when only the core DS Analytics team was frozen — the Ads & Promotions Analytics team was actively hiring (role reposted 2 weeks ago, 100+ LinkedIn applicants). A company-wide modifier caused the pipeline to deprioritize a company that had real, active opportunities in a different team.
+
+**When `partial_freeze` is detected, add team-level detail:**
+
+```json
+"company_intelligence": {
+  "DoorDash": {
+    "status": "partial_freeze",
+    "team_status": {
+      "DS Analytics (Core)": {"status": "freeze", "modifier": -15},
+      "Ads & Promotions Analytics": {"status": "active_hiring", "modifier": 0},
+      "Strategy & Operations": {"status": "active_hiring", "modifier": 0}
+    },
+    "hiring_momentum_modifier": -5
+  }
+}
+```
+
+**How team-level status affects scoring:**
+- When a role matches a team in `team_status`, apply THAT team's modifier instead of the company-wide modifier
+- When a role's team is unknown or not listed, apply the company-wide modifier as fallback
+- The company-wide `hiring_momentum_modifier` should reflect the WEIGHTED picture (e.g., -5 instead of -10 when some teams are frozen but others are active)
+- During Phase 4.5 signal extraction, attempt to identify which team/org the role belongs to (from JD's "About the Team" section) and match it against `team_status` keys
+
+### Step 3: Print intelligence summary
+
+```
+COMPANY INTELLIGENCE (Phase 2D):
+  Checked: {X} companies
+  Fresh (0-3d): {list} — trusted existing intel
+  Spot-checked (4-7d): {list} — {results}
+  Full refresh (8+d): {list} — {results}
+  Referral overrides: {list} — forced full refresh
+  Status changes: {list of any changes from previous status}
+```
+
+FULL_ANALYSIS: Deep scan all targets. FAST_TRACK: Tier 1 + referral companies. QUICK_TRIAGE: Referral companies only.
 
 ---
 
 ## PHASE 3: Multi-Channel Search
 
-Use **keyword matrix from Phase 2B**. Read `references/career-sites.md` for tips.
+**STOP: Read `references/channel_search.md` NOW.** It contains the complete 4-channel search execution guide including Chrome MCP setup, career site workflows, LinkedIn browser automation, ATS API details (Greenhouse/Ashby/Lever/SmartRecruiters), seed registry, ATS probe protocol, adaptive keyword expansion (v16.7), and Channel Completion Gate.
 
-### Browser Detection (do this FIRST)
+Also read: `references/career-sites.md` (navigation tips), `references/linkedin-browser.md` (Ch2/Ch4 browser workflows), `references/linkedin-company-filters.md` (company ID registry).
 
-Check if Chrome browser tools are available (`navigate`, `computer`, `read_page`, `javascript_tool`, `find`, `tabs_context_mcp`, `tabs_create_mcp`). If they are, read `references/linkedin-browser.md` now — it contains the complete browser-first workflow for Channels 2 and 4, which yields far more results than web search alone. Web search can only see what LinkedIn exposes to search engine crawlers (a small fraction of listings and almost none of the recruiter/HM posts). Browser mode unlocks the full LinkedIn experience.
+**Channel overview:**
+- **Ch1 (Career Sites)** — MANDATORY. Chrome MCP is default. Apple always first. Proprietary sites.
+- **Ch2 (LinkedIn Jobs)** — Chrome MCP preferred. Title + tool queries. Freshness sweep first.
+- **Ch3 (ATS Boards)** — API calls to Greenhouse, Ashby, Lever, SmartRecruiters. **v16.11 PRIORITY: Lever + SmartRecruiters FIRST**, then Ashby, then Greenhouse.
+- **Ch4 (Recruiter/HM Posts)** — Chrome REQUIRED. Feed → notifications → search → company pages.
 
-**Channel 1 — Career Sites**: Navigate, run ALL matrix queries, paginate, extract, dedup.
-
-**Channel 2 — LinkedIn Jobs**:
-- **If browser tools available**: Follow `references/linkedin-browser.md` Channel 2 workflow — navigate LinkedIn Jobs directly, extract job cards via JavaScript, read promising JDs. Respect rate limits (3-5 sec waits, max 5 queries/session, stop on CAPTCHA).
-- **If no browser tools**: Fall back to web search `site:linkedin.com/jobs "{query}"` — limited results but better than nothing.
-- FT: 3 queries/2 pages. FA: all/3 pages.
-
-**Channel 3 — Boolean/ATS**: Google `site:` operators for Greenhouse/Lever/Ashby. FT: 2 searches/page 1. FA: all/2 pages.
-
-**Channel 4 — LinkedIn Recruiter/HM Posts** (highest-value channel — warm leads with 3-5x response rates):
-- **If browser tools available**: Follow `references/linkedin-browser.md` Channel 4 workflow — search LinkedIn content feed directly for hiring/recruiting posts. **IMPORTANT**: LinkedIn's content search page uses obfuscated CSS and SVG rendering — JavaScript CSS selectors will NOT work. Use `find` and `read_page` (accessibility tree) to extract post authors, titles, and content. Extract poster info, classify as HM/recruiter/team member, generate post-referencing outreach drafts, add contacts to CRM. Scroll to load more posts (infinite scroll, no pagination buttons).
-- **If no browser tools**: Fall back to web search `site:linkedin.com "hiring" "{query}"` — very limited since most posts aren't indexed.
-- Extract signals, convert to leads with +15 IP. FT: 3 terms/10 posts. **FA: all terms/20 posts.**
-
-If LinkedIn blocked (CAPTCHA, login wall, rate limit): log the specific error, report what was found so far, proceed with available channels. Never retry aggressively — the user's LinkedIn account is at stake.
-
-**Cross-channel dedup** (4 layers): URL → normalized key → fuzzy title+location → job ID.
-
-### ═══ CHANNEL COMPLETION GATE (BLOCKING) ═══
-
-Phase 4 CANNOT start until this gate passes. The reason this gate exists is that historically, channels got silently dropped (especially Channel 4) and the user only discovered it after the run was complete. This wastes the user's time and misses potential warm-channel leads that are the most valuable outcomes.
-
-Before moving to Phase 4, print this channel log and verify every channel was attempted:
-
-```
-CHANNEL COMPLETION LOG:
-  Ch1 (Career Sites):         [✓/✗] — {X} roles found | {notes}
-  Ch2 (LinkedIn Jobs):        [✓/✗/⚠] — {X} roles found | {browser/web_search} | {notes}
-  Ch3 (Boolean/ATS):          [✓/✗] — {X} roles found | {notes}
-  Ch4 (Recruiter/HM Posts):   [✓/✗/⚠] — {X} roles found | {browser/web_search} | {notes}
-  Browser tools available:    [YES/NO]
-  All channels attempted:     [YES/NO]
-```
-
-Note: ⚠ means the channel was attempted via web search fallback (browser unavailable). This is acceptable but yields significantly fewer results — especially for Channel 4 where most recruiter posts aren't indexed by search engines.
-
-**If any channel shows ✗**: Go back and run it before proceeding. A channel returning 0 results is fine (mark ✓ with "0 roles found") — the requirement is that the search was *attempted*, not that it produced results. The only acceptable exception is if a platform is completely blocked/down (e.g., LinkedIn returns a login wall), in which case log the specific error.
-
-**This applies to ALL modes** including QUICK_TRIAGE and FAST_TRACK. The scope per channel varies by mode (QUICK_TRIAGE does lighter searches), but every channel must be attempted. The warm-first philosophy depends on Channel 4 (recruiter/HM posts) being run every time — it's the primary source of warm-channel leads.
+**Channel Completion Gate (BLOCKING):** Print channel log before Phase 3.5.
 
 ---
+## PHASE 3.5–3.7: URL Pre-Triage, Liveness Sampling, Cross-Run Dedup
 
+**STOP: Read `references/url_triage.md` NOW.** It contains the complete URL triage pipeline:
+
+- **Phase 3.5**: LinkedIn ID age filter, career site URL preference, pattern rejection, known-problematic flagging.
+- **Phase 3.6**: Stratified 1-per-company sampling, EARLY_DEAD flagging, platform migration detection. **v16.11: Google URL Freshness Pre-Check** (75% dead rate).
+- **Phase 3.7**: Cross-run dedup against Google Sheet. BLOCKING — only unique roles proceed to Phase 4.
+
+These gates save 40-80% of downstream context.
+
+---
 ## PHASE 4: Read and Evaluate JDs
 
-**No job scored until full description read.** For each new role:
+### Phase 4.0: Metadata Pre-Filter (FAST SKIP) ← NEW in v16.11
+
+**Before reading any full JDs**, do a quick pass over the metadata already available from Ch1-3 (title, company, location, department). Many roles can be eliminated from title and metadata alone — saving the expensive full JD read for roles that have a realistic chance of scoring above HOLD floor.
+
+**Auto-SKIP without reading JD if ANY of these apply:**
+- **Title signals IC role**: Contains "Lead" without "Manager/Director/Head", or "Senior [Individual Role]", "Staff", "Principal" — and candidate is leadership-track (Guardrail 7)
+- **Title signals wrong function**: Contains "Engineer", "Developer", "Designer", "Recruiter", "People Analytics", "Marketing Analytics" (unless these are in candidate's target functions)
+- **Title signals uplevel**: Contains "VP", "Chief", "President", "Head of" at companies where these are C-suite equivalent
+- **Location mismatch**: Role is clearly non-US or in-office-only at a non-target city (from metadata)
+- **Company blocked**: Company is in blocked list (e.g., Amazon)
+- **Comp clearly below floor**: If salary visible in metadata and max < $180K
+
+**Print the pre-filter summary:**
+```
+METADATA PRE-FILTER: {X} roles entered → {Y} fast-SKIPped → {Z} proceeding to full JD read
+  Fast-SKIPped: {title} @ {company} — {reason}
+  ...
+```
+
+This typically saves 30-50% of JD reads. In Run 14, 5 of 9 roles (Discord DE, Instacart People Analytics, Airbnb IC, Affirm IC, Lyft IC) could have been caught here.
+
+### Phase 4.1: Full JD Read
+
+**No job scored until full description read.** For each role surviving the pre-filter:
 1. Read complete description. Extract salary, posted date, velocity signals.
 2. Stale filter: >120 days auto-SKIP, 31-60 days HOLD warning.
 3. Save JD snapshot to `{workspace}/jd/`
@@ -549,6 +705,8 @@ For each scored role:
 
 Flow: Scores + networking path → Action Gate → Guardrails check → Reasoning block → Bucket assignment → Adaptive thresholds → Company expansion if needed.
 
+**v16.5 Cold APPLY NOW check**: Before assigning APPLY NOW to any role with no warm channel (no Strong networking path), verify IP ≥ 55. If IP < 55 AND no warm channel → downgrade to NETWORK FIRST with note "Cold channel + IP {X} below floor — find referral to improve odds." See `references/scoring.md` § Cold APPLY NOW IP Floor.
+
 **Each recommendation MUST include a reasoning block** explaining key signals, attractiveness, and strategy rationale.
 
 Action Pack content:
@@ -558,13 +716,127 @@ Action Pack content:
 
 Save to `{workspace}/Job_Search_Action_Pack_{M-D-YYYY}.md`
 
+### Phase 6F: Pre-compute csv_row Arrays ← NEW in v16.11
+
+**Why this matters**: The sheet write (Phase 9) is the most failure-prone step in the pipeline — it runs at the tail end of a long session when context is most strained. Previous runs have produced malformed rows, dropped columns, and column-shift errors because the 27-value arrays were being assembled from memory at the worst possible time.
+
+The fix: build each role's csv_row immediately after scoring and action gate assignment, while all the signals, scores, and decisions are fresh in context. Phase 7 (CSV), Phase 8.7 (checkpoint), and Phase 9 (sheet write) then simply consume these pre-built arrays — no reconstruction needed.
+
+**For each scored role** (not SKIPs), assemble a 27-value array following the exact column mapping in `references/output-formats.md` § Column-to-Array Position Mapping:
+
+```
+csv_row = [
+  search_date,        # [0]  A: "M/D/YYYY"
+  rank,               # [1]  B: integer
+  action_gate,        # [2]  C: "NETWORK FIRST" etc
+  job_title,          # [3]  D: full title
+  salary_range,       # [4]  E: "200000-300000" or "N/A"
+  location,           # [5]  F: location string
+  company,            # [6]  G: company name
+  team,               # [7]  H: team/org
+  posted_date,        # [8]  I: "M/D/YYYY" or "N/A"
+  fit_score,          # [9]  J: integer
+  opp_score,          # [10] K: integer
+  interview_prob,     # [11] L: integer
+  uplevel_risk,       # [12] M: "LOW"/"MED"/"HIGH"
+  downlevel_risk,     # [13] N: "LOW"/"MED"/"HIGH"
+  bucket,             # [14] O: "A"/"B"/"C"
+  key_strengths,      # [15] P: consolidated string
+  potential_gaps,     # [16] Q: consolidated string
+  url,                # [17] R: verified URL
+  stage,              # [18] S: "New"
+  next_action,        # [19] T: action string
+  next_action_date,   # [20] U: "M/D/YYYY"
+  false,              # [21] V: Networked (checkbox)
+  false,              # [22] W: Applied (checkbox)
+  false,              # [23] X: Interview (checkbox)
+  false,              # [24] Y: Referral (checkbox)
+  "",                 # [25] Z: Resume Ver
+  jd_hash             # [26] AA: JD hash
+]
+```
+
+**Validation**: After building each csv_row, immediately count elements — must be exactly 27. Verify [5] is Location, [6] is Company, [9-11] are integers. This catches errors while the data is still in front of you, rather than discovering them at Phase 9 when it's too late.
+
+Store the csv_row alongside each role's scoring data. These arrays flow into Phase 7 (CSV file), Phase 8.7 (checkpoint JSON), and Phase 9 (sheet write) without modification.
+
 ---
 
 ## PHASE 7: Generate CSV + URL Verification
 
-26-column schema (A-Z). See `references/output-formats.md`. Run URL verification — replace generic career page URLs with specific posting links.
+27-column schema (A-AA). See `references/output-formats.md`. Run URL verification — replace generic career page URLs with specific posting links.
 
-**IMPORTANT**: The CSV columns MUST match the exact 26-column schema in `references/output-formats.md` § Column-to-Array Position Mapping. Each row must have exactly 26 values in the order: Search Date, Rank, Action, Job Title, Salary Range, **Location**, Company, Team, Posted Date, Fit Score, Opportunity Score, Interview Prob, Uplevel Risk, Downlevel Risk, Bucket, Key Strengths, Potential Gaps, URL, Stage, Next Action, Next Action Date, Applied, Interview, Referral, Resume Ver, JD Hash.
+**v16.11**: Phase 7 now assembles the CSV directly from the pre-computed csv_row arrays built in Phase 6F. Each role already has its validated 27-value array — Phase 7 simply writes them out as CSV rows. This eliminates the previous failure mode where column data was reconstructed from scattered context late in the session.
+
+**IMPORTANT**: The CSV columns MUST match the exact 27-column schema in `references/output-formats.md` § Column-to-Array Position Mapping. Each row must have exactly 27 values in the order: Search Date, Rank, Action, Job Title, Salary Range, **Location**, Company, Team, Posted Date, Fit Score, Opportunity Score, Interview Prob, Uplevel Risk, Downlevel Risk, Bucket, Key Strengths, Potential Gaps, URL, Stage, Next Action, Next Action Date, Networked, Applied, Interview, Referral, Resume Ver, JD Hash.
+
+---
+
+## PHASE 7.5: URL Liveness Gate ← BLOCKING (v16.5: dedup moved to Phase 3.7)
+
+This gate exists because of repeated, painful failures: Run 28 had 10 dead LinkedIn URLs that the user had to manually delete. Every role that makes it past this gate must have a verified-live URL. Roles that fail get dropped before the sheet write — it's far better to write 5 clean rows than 11 rows the user has to clean up.
+
+**Note**: Cross-run deduplication was moved to Phase 3.7 in v16.5 to avoid wasting context on roles already in the sheet. By this point, all roles have already passed the dedup gate.
+
+### Step 1: URL Liveness Verification (MANDATORY for ALL roles, not just APPLY NOW)
+
+For every role in the pipeline, verify its URL actually loads a real job posting. Dead URLs waste the user's time — they click through and get a 404 or generic page. LinkedIn `/jobs/view/` URLs are the worst offenders (they die within days as listings close).
+
+**Roles flagged as `URL_UNVERIFIED` in Phase 3.5** (known-problematic sources like Anthropic GH, CareerPuck, Chime GH) should skip full browser verification here — the issue is already documented. Just carry the flag through to output. Focus verification effort on URLs that haven't been pre-triaged.
+
+**How to verify (for non-URL_UNVERIFIED roles):**
+
+1. **If browser tools are available**: Navigate to each URL. Check for:
+   - 404 / "page not found" / "this job is no longer available" / "no longer accepting applications"
+   - Redirect to a generic search page or company homepage
+   - LinkedIn login wall blocking the content
+
+2. **If no browser tools**: Use `WebFetch` on the URL. Look for 404 status, redirect chains, or generic page content.
+
+3. **For LinkedIn URLs** (most failure-prone):
+   - Always try to find the equivalent company career site URL first — these are far more stable
+   - If LinkedIn URL is dead: search `site:{company-careers-domain} "{exact job title}"` for replacement
+   - If replacement found → use it. If not → **drop the role**
+
+4. **For Greenhouse/Lever/Ashby URLs**: Generally reliable but still check for expired postings. If a new company's GH/Lever URLs systematically fail here, flag them for addition to the Phase 3.5 known-problematic list in Phase 10.
+
+**URL Classification (assign one to each role):**
+- `LIVE_JD` — URL loads and shows the specific job description → **PASS**
+- `LIVE_REPLACED` — Original dead but replacement found on career site → **PASS** with updated URL
+- `SEARCH_REDIRECT` — URL redirects to a search/browse page, not the specific JD → **DROP** (or keep as URL_UNVERIFIED if the role data came from API)
+- `404_GONE` — URL returns 404 or "job no longer available" → **DROP**
+- `403_BLOCKED` — URL returns 403 forbidden → **DROP** unless career site replacement found
+- `JS_REQUIRED` — Page loads but content requires JavaScript rendering → keep as **URL_UNVERIFIED**
+- `URL_UNVERIFIED` — Pre-flagged from Phase 3.5 known-problematic list → **PASS** (already flagged)
+
+**Outcome for each URL:**
+- `LIVE_JD` or `LIVE_REPLACED` → **PASS**
+- `URL_UNVERIFIED` or `JS_REQUIRED` → **PASS with flag** (include in output, note in Potential Gaps)
+- `SEARCH_REDIRECT`, `404_GONE`, `403_BLOCKED` → **DROP** (do not write to sheet) unless replacement found
+
+**Display the liveness results:**
+```
+URL LIVENESS GATE:
+  Tested: {X} URLs ({Y} pre-flagged URL_UNVERIFIED, {Z} newly verified)
+  LIVE_JD: {N} ✓
+  LIVE_REPLACED: {M} (found alternative URLs)
+  URL_UNVERIFIED: {U} (known-problematic or JS-required, included with flag)
+  Dropped: {K} ✗
+    - {Company} — {Title}: {classification} (e.g., "404_GONE", "SEARCH_REDIRECT to careers page")
+  Final output: {F} roles → proceeding to Phase 8
+```
+
+### Rate Limiting
+
+When testing URLs in browser, wait 2-3 seconds between navigations. If LinkedIn returns CAPTCHA or rate limit, stop and mark remaining LinkedIn URLs as "unverified" with a warning.
+
+### Regenerate outputs after this gate
+
+After both checks complete, regenerate the CSV and Action Pack using ONLY the surviving roles. Renumber ranks based on surviving roles. The Summary Report (Phase 8) should reflect the post-gate counts, not the pre-gate counts. This ensures the sheet, CSV, and Action Pack all agree on the same set of roles.
+
+### This gate is BLOCKING
+
+Phase 8 and Phase 9 CANNOT proceed until both dedup and URL liveness are complete.
 
 ---
 
@@ -579,16 +851,129 @@ Read Summary Report template in `references/output-formats.md`. ALL sections req
 
 ---
 
+## PHASE 8.5: Coverage Report ← NEW in v16.2 (MANDATORY)
+
+**Why this exists**: The worst outcome for a daily job search system is a false negative — the tool reports "nothing out there" when opportunities exist but were missed due to tool limitations, blocked sites, or degraded channels. This report ensures the user can always distinguish between "quiet market" and "tool hit a wall." It must be printed at the end of every run, regardless of how many roles were found.
+
+**Print the following report EXACTLY — every section is required:**
+
+```
+═══ COVERAGE REPORT — Run {N} ═══
+
+SEARCH REACH:
+  Companies directly searched (Ch1): {X} (list names)
+  ATS API companies queried (Ch3):   {X} total
+    Greenhouse: {X} queried of {Y} in registry
+    Ashby:      {X} queried of {Y} in registry
+    Lever:      {X} queried of {Y} in registry
+    SmartRecr:  {X} queried of {Y} in registry
+  ATS Registry size:                 {X} companies ({Y} with working APIs, {Z} unknown)
+  New companies probed this run:     {X} ({results})
+  LinkedIn queries executed:         {X} (browser: {YES/NO}, mode: {FULL/DEGRADED})
+  ATS site: searches executed:       {X} (for companies not on any API)
+
+CHANNEL HEALTH:
+  Ch1 (Career Sites):    {✅ FULL / ⚠ PARTIAL / ❌ BLOCKED} — {X} roles — {notes}
+  Ch2 (LinkedIn Jobs):   {✅ FULL (browser) / ⚠ DEGRADED (web search) / ❌ BLOCKED} — {X} roles
+  Ch3 (ATS Boards):      {✅ FULL / ⚠ PARTIAL} — API: {X} roles, site-search: {X} roles
+  Ch4 (Recruiter Posts): {✅ FULL (browser) / ⏭ SKIPPED (no browser)} — {X} roles
+
+BLIND SPOTS (things this run could NOT see):
+  {List each limitation honestly. Examples:}
+  - LinkedIn Jobs searched via web fallback only — estimated 80-90% of listings invisible
+  - Ch4 skipped — all recruiter/HM post leads missed this run
+  - Netflix career site blocked (anti-bot) — 0 visibility into Netflix roles
+  - {X} target companies not on any ATS API — only reachable via career site or LinkedIn
+  - Greenhouse API companies not queried this run: {list}
+
+FALSE NEGATIVE RISK: {LOW / MEDIUM / HIGH}
+  - LOW: Browser available, all 4 channels active, 20+ ATS APIs queried across platforms
+  - MEDIUM: No browser (Ch2 degraded, Ch4 skipped) but ATS API coverage strong (15+ companies)
+  - HIGH: No browser AND fewer than 10 ATS APIs queried — significant opportunity gaps likely
+
+CONFIDENCE ASSESSMENT:
+  "This run searched {X}% of the addressable market for your profile.
+   {If HIGH risk}: ⚠ There may be relevant roles this run could not reach."
+
+SPECIFIC ACTIONS TO REDUCE RISK (list ALL that apply):
+  - [ ] {action 1 — e.g., "Re-run with browser tools enabled for full LinkedIn access (Ch2+Ch4)"}
+  - [ ] {action 2 — e.g., "Manually check Netflix careers at jobs.netflix.com (blocked by anti-bot)"}
+  - [ ] {action 3 — e.g., "Query remaining 9 Greenhouse APIs not covered this run: {list}"}
+  - [ ] {action 4 — e.g., "Add {company} to Greenhouse list — they may have migrated to Greenhouse"}
+```
+
+**This report is NOT optional.** Even if 0 roles were found, print it — especially if 0 roles were found. A "0 results + LOW false negative risk" is reassuring. A "0 results + HIGH false negative risk" tells the user to investigate further.
+
+---
+
+## PHASE 8.7: Write Checkpoint JSON ← NEW in v16.11
+
+**This phase creates a safety net.** Before attempting the sheet write (the most failure-prone step), save all scored data to a checkpoint file. If Phase 9 fails, this file lets you retry just the write without re-running the entire pipeline.
+
+Save to `{workspace}/scored_run{N}.json` with this structure:
+
+```json
+{
+  "run_number": N,
+  "date": "M/D/YYYY",
+  "mode": "DISCOVERY",
+  "input_candidates": 12,
+  "jds_read": 10,
+  "scored_roles": [
+    {
+      "id": "company_title_id",
+      "title": "...",
+      "company": "...",
+      "team": "...",
+      "location": "...",
+      "url": "...",
+      "fit": 72,
+      "opportunity": 63,
+      "interview_prob": 58,
+      "action_gate": "NETWORK FIRST",
+      "bucket": "B",
+      "csv_row": [/* the 27-value array from Phase 6F */],
+      "url_liveness": "LIVE_JD",
+      "jd_hash": "..."
+    }
+  ],
+  "skipped_roles": [
+    {
+      "id": "...",
+      "title": "...",
+      "company": "...",
+      "skip_reason": "...",
+      "fit": 42
+    }
+  ],
+  "action_summary": {
+    "apply_now": 0,
+    "network_first": 1,
+    "hold": 1,
+    "hold_borderline": 5,
+    "skip": 5
+  }
+}
+```
+
+The key feature is that `csv_row` arrays are embedded directly in each scored role — Phase 9 reads them straight from this file rather than reconstructing from memory. This is what makes the sheet write reliable even under context pressure.
+
+**Fallback path**: If Phase 9 fails after retry, tell the user: "The scored data is saved at `scored_run{N}.json`. You can retry the sheet write anytime by saying 'sync run {N}' — the job-sync skill will pick up from this checkpoint." This provides a recovery path without losing any work.
+
+---
+
 ## PHASE 9: Append to Google Sheet ← STRICT COLUMN MAPPING
 
-**STOP: Read `references/output-formats.md` § Column-to-Array Position Mapping NOW.** This defines the exact 26-value array format. The reason this explicit mapping exists is that Run 16's Apps Script had a missing Location column and extra text fields, which shifted all data and corrupted 4 rows. The mapping table and validation code in the template prevent this.
+**STOP: Read `references/output-formats.md` § Column-to-Array Position Mapping NOW.** This defines the exact 27-value array format. The reason this explicit mapping exists is that Run 16's Apps Script had a missing Location column and extra text fields, which shifted all data and corrupted 4 rows. The mapping table and validation code in the template prevent this.
 
-Apps Script via Monaco API (see `references/output-formats.md`). Verify. Retry once, then CSV fallback.
+**Source data**: Read csv_row arrays from `{workspace}/scored_run{N}.json` (written in Phase 8.7). Do NOT reconstruct the 27-value arrays from memory — the checkpoint file is the single source of truth for the sheet write. This is the key reliability improvement in v16.11: by the time Phase 9 runs, the data is already validated and formatted, so the write phase just needs to inject it.
 
-### Pre-Write Column Validation (MANDATORY — NEW)
+Apps Script via Monaco API (see `references/output-formats.md`). Verify. Retry once. If retry fails → tell user about job-sync fallback.
 
-Before injecting the Apps Script, verify the data array for EACH row:
-1. **Count**: Exactly 26 values per row (not 25, not 27)
+### Pre-Write Column Validation (MANDATORY)
+
+Before injecting the Apps Script, verify the data array for EACH row (these checks should pass trivially since the arrays were validated in Phase 6F, but defense-in-depth matters):
+1. **Count**: Exactly 27 values per row (not 25, not 26)
 2. **Position check**: Index [5] is Location (not Company), Index [6] is Company (not Team), Index [17] is URL (not a text description)
 3. **Type check**: Indices [9], [10], [11] are integers (Fit, Opp, IP scores), not strings
 4. **No extra fields**: Only 2 text description columns — [15] (Key Strengths) and [16] (Potential Gaps). All match/networking/strategy text goes into these two fields or into [19] (Next Action). Never add extra text columns.
@@ -612,7 +997,9 @@ The reason this step exists is that Run 9's Apps Script save failed silently, an
 
 ### Phase 10 Field Checklist
 
-Print this checklist and check off each field as you update it. The reason this explicit checklist exists is that Run 13's evaluation found 5 preference fields were silently skipped — `channel_performance`, `cluster_outcomes`, `weekly_kpis`, `referral_tracking`, and `sourcing_performance` — partially breaking the learning loop for subsequent runs.
+Print this checklist and check off each field as you update it. The reason this explicit checklist exists is that Run 13's evaluation found 5 preference fields were silently skipped — `channel_performance`, `cluster_outcomes`, `weekly_kpis`, `referral_tracking`, and `sourcing_performance` — partially breaking the learning loop for subsequent runs. Run 16's evaluation found that `title_expansion_map`, `url_pattern_registry`, `linkedin_company_filters`, and `Google.application_budget` were silently skipped.
+
+**MANDATORY**: Every field below MUST be explicitly addressed — either updated OR marked "no change — {reason}". Silent skips are NOT acceptable. When the checklist is printed at the end of Phase 10, every line MUST show either [✓] with the change made, or [—] with "no change — {reason}".
 
 ```
 PHASE 10 UPDATE CHECKLIST:
@@ -620,6 +1007,9 @@ PHASE 10 UPDATE CHECKLIST:
 [ ] run_counter → {N}
 [ ] company_search_log → Update times_searched + new_roles_found_last for EACH company searched
 [ ] company_intelligence → Update EXISTING keys only (NEVER create "Company_intel" duplicates)
+[ ] company_intelligence.title_vocabulary → Update from adaptive keyword expansion discoveries (v16.7)
+[ ] company_intelligence.team_status → Update team-level freeze data if partial_freeze detected (v16.7)
+[ ] title_expansion_map → Propose new adjacent titles if discovered this run (v16.11)
 [ ] keyword_wisdom → Update times_used, avg_score, confidence for each keyword used this run
 [ ] market_health → url_404_rate_by_run, trend, dead_channels_this_run, recommendation
 [ ] learning_history.strategy_changes → Append run summary
@@ -629,6 +1019,16 @@ PHASE 10 UPDATE CHECKLIST:
 [ ] channel_performance → Update if new Applied/Interview outcomes; note "no change" if none
 [ ] cluster_outcomes → Update if new applications submitted; note "no change" if none
 [ ] last_sheet_write_status → "success_run{N}_{X}rows_at_{Y}" or "failed_{reason}"
+--- ATS REGISTRY (NEW in v16.2) ---
+[ ] ats_registry → Update last_queried + filtered_roles_last for each company queried
+[ ] ats_registry → Add newly probed companies (ats_type, slug, api_works, last_probed)
+[ ] ats_registry → Flag failed APIs (api_works = false + note with error)
+[ ] ats_registry → Re-probe stale entries (last_probed > 30 days ago)
+--- PLATFORM MIGRATION TRACKING (NEW in v16.6) ---
+[ ] url_pattern_registry → Compare this run's URL patterns against stored patterns (see below)
+[ ] url_pattern_registry → Log any PLATFORM_MIGRATION flags from Phase 3.6
+[ ] url_pattern_registry → Update career-sites.md reference if migration confirmed
+[ ] linkedin_company_filters → Add newly discovered company IDs (see references/linkedin-company-filters.md)
 --- CRM + INTERVIEW PIPELINE (NEW in v14) ---
 [ ] networking_crm.contacts → Add new contacts discovered this run
 [ ] networking_crm.contacts → Update outreach_status for contacts acted on
@@ -640,13 +1040,60 @@ PHASE 10 UPDATE CHECKLIST:
 [ ] interview_pipeline → Close entries for completed processes
 [ ] interview_pipeline → Generate prep tasks for newly scheduled interviews
 [ ] interview_pipeline.thank_you_notes → Flag unsent thank-you notes
-All fields checked: [ ] YES
+--- v16.11 FIELDS (NEW — Run 16 evaluation found these were silently skipped) ---
+[ ] company_intelligence.Google.application_budget → Update slots_used/available if Google roles applied to
+[ ] url_pattern_registry → Add URL patterns for NEW companies scored this run (Reddit, Stripe, etc.)
+[ ] Phase 2B keyword_matrix artifact → Save to {workspace}/keyword_matrix_run{N}.md (see Fix #5)
+All fields checked: [ ] YES — Every field shows [✓] or [—] with reason
 ```
 
 **Clarification on "no change" fields**: Not every field changes every run. If no new applications were submitted this run, `sourcing_performance`, `channel_performance`, and `cluster_outcomes` won't change — but you still need to acknowledge them ("no change — 0 new apps this run") rather than silently skipping. This prevents the ambiguity of "was this field skipped or was it unchanged?"
 
----
+### Platform Migration Detection ← NEW in v16.6
 
+**Why this exists**: Run 11 discovered that Microsoft migrated from `jobs.careers.microsoft.com` to `apply.careers.microsoft.com`, orphaning all existing job IDs (7-digit format completely dead on new platform). This wasn't detected until Phase 7.5, after the pipeline had already scored and ranked those roles. Platform migrations break ALL URLs for a company simultaneously — detecting them proactively prevents cascading failures.
+
+**How it works — URL pattern comparison across runs:**
+
+1. **Build this run's URL pattern fingerprint** — for each company that had roles in this run, record:
+   - Career site domain (e.g., `apply.careers.microsoft.com`)
+   - Job ID format (e.g., 16-digit PID vs 7-digit legacy ID)
+   - URL structure (e.g., `/careers/job/{pid}` vs `/global/en/job/{id}`)
+
+2. **Compare against stored patterns** in `preferences.url_pattern_registry`:
+   ```json
+   "url_pattern_registry": {
+     "Microsoft": {
+       "domain": "apply.careers.microsoft.com",
+       "id_format": "16-digit PID",
+       "url_template": "/careers/job/{id}",
+       "last_verified": "2026-03-13",
+       "previous_domain": "jobs.careers.microsoft.com",
+       "migration_date": "2026-01"
+     }
+   }
+   ```
+
+3. **Flag mismatches**:
+   - Domain changed → `PLATFORM_MIGRATION` — update registry, update `references/career-sites.md`
+   - Job ID format changed → `ID_FORMAT_CHANGE` — all cached IDs for this company are suspect
+   - URL structure changed → `URL_RESTRUCTURE` — existing URLs may still work but monitor
+
+4. **Also check for Phase 3.6 migration flags**: If Phase 3.6 detected any `PLATFORM_MIGRATION` signals during early URL sampling, record them here.
+
+5. **Print migration report** (only if changes detected):
+   ```
+   PLATFORM MIGRATION DETECTION:
+     Microsoft: MIGRATION CONFIRMED — jobs.careers.microsoft.com → apply.careers.microsoft.com
+       Old ID format: 7-digit (e.g., 1761259) — ALL DEAD on new platform
+       New ID format: 16-digit PID (e.g., 1970393556826666)
+       Action: Updated career-sites.md, url_pattern_registry
+     {other companies if any}
+   ```
+
+6. **If no `url_pattern_registry` exists in preferences** (first run with this feature): Initialize it from this run's URL data. No comparison needed — just set the baseline.
+
+---
 ## Operational Modes (NEW in v14)
 
 The system now operates in two primary modes that determine which phases run:
@@ -682,82 +1129,14 @@ When the user says something ambiguous like "daily check-in" or "what should I d
 - Otherwise → default to **Discovery Mode** (FAST_TRACK)
 
 Always tell the user which mode was selected and why. They can override.
-
 ## Discovery Depth Levels
 
-| Feature | QUICK_TRIAGE | FAST_TRACK | FULL_ANALYSIS |
-|---------|-------------|------------|---------------|
-| Companies | Max 3 | Max 5 | Unlimited |
-| Roles/company | 10 (page 1) | 15 (2-3 pages) | All pages |
-| Scoring | IP only | Fit + Opp(3-pillar) + IP | Fit + Opp(5-pillar) + IP |
-| Channels | Ch1-2 | **All 4 (Ch4 lighter)** | **All 4 (Ch4 full depth)** |
-| Signal extraction | Skip | Light (domain + role only) | Full (all 4 categories) |
-| Networking path eval | Skip | Strong/Weak only | Full (Strong/Moderate/Weak) |
-| Reasoning blocks | Skip | Top 3 only | All scored roles |
-| Guardrails | Basic | Standard | Full enforcement |
-| Tailoring | None | Top 3 full, rest light | All APPLY NOW full |
-| Sheet append | No | Yes | Yes + formatting |
-| Discovery | None | 1-2 companies | 3-5 companies |
-| Keyword Intel | Skip | Load & use | Full + sample |
-| Market Health | Skip | Load & display | Full + responsive |
-| Company Intel | Skip | Tier 1 only | All companies |
-| CRM follow-ups | Yes (always) | Yes (always) | Yes (always) |
-| Interview pipeline | Yes (always) | Yes (always) | Yes (always) |
-
-**CRM and Interview Pipeline phases run in ALL modes and BOTH operational modes.** They are never skipped because networking follow-ups and interview prep are time-sensitive.
+**QUICK_TRIAGE**: Max 3 companies, page 1, IP-only, Ch1-2, skip signals/reasoning/tailoring/sheet.
+**FAST_TRACK**: Max 5 companies, 2-3 pages, Fit+Opp(3)+IP, all 4 Ch (Ch4 lighter), light signals, top 3 reasoning, sheet append.
+**FULL_ANALYSIS**: Unlimited, all pages, full 5-pillar, all 4 Ch full depth, full signals/reasoning/guardrails/tailoring, sheet + formatting.
+**CRM and Interview Pipeline run in ALL modes** — never skipped.
 
 ---
-
-## Execution Pipeline Summary (v14)
-
-```
-PHASE 0:    Load preferences + CRM memory
-PHASE 1:    Daily Check-in (learning engine + channel performance)
-PHASE 1.5:  Manage networking follow-ups (NEW — CRM layer)
-PHASE 1.7:  Update interview pipeline (NEW — prep tasks, reminders)
---- DISCOVERY MODE ONLY (skip in Networking Mode) ---
-PHASE 2A:   Build search queue
-PHASE 2B:   Keyword intelligence (BLOCKING GATE)
-PHASE 2C:   Market health check
-PHASE 2D:   Company intelligence
-PHASE 3:    Multi-channel search (4 channels)
-PHASE 4:    Read and evaluate JDs
-PHASE 4.5:  Extract structured signals (BLOCKING GATE)
-PHASE 5:    Score using signals (not raw JD text)
---- END DISCOVERY ONLY ---
-PHASE 5.5:  Evaluate networking path strength + update CRM
-PHASE 6:    Determine engagement strategy + Action Pack (with reasoning + guardrails)
-PHASE 7:    Generate CSV
-PHASE 8:    Summary Report + Relationship Table + Interview Pipeline Dashboard
-PHASE 9:    Append to Google Sheet
-PHASE 10:   Save preferences + update learning + update CRM + update interview pipeline
-```
-
-### Networking Mode Pipeline (condensed)
-
-```
-PHASE 0:    Load preferences + CRM memory
-PHASE 1:    Daily Check-in (sync sheet changes, compute learning)
-PHASE 1.5:  Manage networking follow-ups (primary focus)
-PHASE 1.7:  Update interview pipeline (primary focus)
-PHASE 5.5:  Update CRM for existing opportunities (no new scoring)
-PHASE 8:    Relationship Table + Interview Pipeline Dashboard
-PHASE 10:   Save all state (CRM, interview pipeline, learning)
-```
-
----
-
-## Deduplication (4 layers)
-
-1. Exact URL → auto-skip
-2. Normalized key (company|title|location) → auto-skip
-3. Fuzzy title+location (>80% overlap) → HOLD "confirm duplicate"
-4. Job ID extraction → auto-skip
-
-Also check against Google Sheet rows.
-
----
-
 ## Stale Posting Thresholds
 
 | Age | Action |
@@ -769,7 +1148,5 @@ Also check against Google Sheet rows.
 | 120+ days | Auto-SKIP (zombie) |
 
 ---
-
 ## Date Format
-
 All dates: `M/D/YYYY` — no leading zeros.

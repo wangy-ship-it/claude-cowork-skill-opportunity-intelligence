@@ -1,10 +1,12 @@
 # Job Search AI Skill
 
-**An AI-native job search system that turns Claude into a personal career intelligence agent.**
+**Most Claude skills are a single file. This one is 17 modules.**
 
-Built as a [Claude Code skill](https://docs.claude.com), this system transforms job searching from a manual, ad-hoc process into a structured, data-driven pipeline — complete with multi-channel sourcing, automated scoring, relationship CRM, and continuous learning.
+An AI-native job search system that turns Claude into a personal career intelligence agent — with multi-channel sourcing, three-score evaluation, a relationship CRM, and continuous learning. All markdown, no code. No Python, no APIs, no database. Just structured prose that runs anywhere Claude runs.
 
-> This project started as a personal experiment: *"What if I gave an AI agent the same frameworks, heuristics, and decision criteria that a great recruiter or career coach would use?"* Over 19 iterations, it evolved into a comprehensive system that manages the full lifecycle of a job search.
+> This project started as a personal experiment: *"What if I gave an AI agent the same frameworks, heuristics, and decision criteria that a great recruiter or career coach would use?"* Over 19+ iterations, it evolved into a comprehensive system that manages the full lifecycle of a job search — built entirely in natural language.
+
+<!-- 🎬 [Watch the demo video](TODO: add link) -->
 
 ---
 
@@ -18,15 +20,86 @@ Unlike traditional software:
 - **No UI to build** — the interface is natural language conversation
 - **No API integrations to maintain** — Claude browses the web directly via Cowork mode
 
-A skill is activated when Claude detects relevant keywords in conversation (e.g., "run my job search"). It loads the main instruction file (`SKILL.md`), which orchestrates 12 reference files on-demand — only pulling in the scoring rubric when scoring, the CRM spec when managing contacts, etc.
+A skill is activated when Claude detects relevant keywords in conversation (e.g., "run my job search"). It loads the main instruction file (`SKILL.md`), which orchestrates **17 reference modules** on-demand — only pulling in the scoring rubric when scoring, the CRM spec when managing contacts, etc.
 
 **This project demonstrates that prompt engineering at scale is software engineering** — with version control, modular architecture, defined interfaces, and iterative debugging.
 
 ---
 
+## Portability: The Agent Skills Standard
+
+This skill follows the emerging **Agent Skills standard** — a folder of markdown files with a `SKILL.md` orchestrator and `references/` directory. Because it's all markdown with no runtime dependencies, it works across:
+
+- **Claude Code** — native skill loading
+- **Claude Cowork** — browser-integrated execution
+- **Cursor** — as context files
+- **Gemini CLI** — as instruction files
+- **Codex CLI** — as prompt context
+
+No vendor lock-in. No proprietary format. Copy the folder, point your agent at it, and it works.
+
+---
+
+## 10-Phase Pipeline
+
+Every execution follows a structured 10-phase pipeline:
+
+| Phase | Name | What Happens |
+|-------|------|-------------|
+| 0.5 | Company Targeting | Dynamic tier rotation & auto-discovery |
+| 2B | Keyword Engine | Proven / Promising / Discovery tier management |
+| 3 | 4-Channel Search | Career sites, LinkedIn, ATS APIs, recruiter posts |
+| 3.5–3.7 | URL Triage | Dead link detection before context investment |
+| 4.5 | Signal Extraction | Unstructured JD → structured role/domain/tech signals |
+| 5 | Three-Score Engine | Fit + Opportunity + Probability scoring |
+| 5.5 | Action Gates | Deterministic routing: APPLY / NETWORK / HOLD / SKIP |
+| 6–9 | Action Packs | Auto-generated tailored deliverables + CRM sync |
+| 9.5 | CRM Sync | Pipeline state transitions + follow-up scheduling |
+| 10 | Learning Loop | Outcome feedback → scoring recalibration |
+
+---
+
+## 5 Domain Clusters — 17 Modules
+
+The 17 reference modules are organized into 5 domain clusters:
+
+### Search
+The discovery engine — how the system finds opportunities across multiple channels.
+- `channel_search.md` — Multi-channel search orchestrator (Phase 3)
+- `career-sites.md` — Company-specific navigation patterns & ATS handling
+- `linkedin-browser.md` — LinkedIn browser automation (Channels 2 & 4)
+- `keyword_engine.md` — Keyword intelligence with Proven/Promising/Discovery tiers
+
+### Intelligence
+The evaluation brain — how the system scores and decides.
+- `signal_extraction.md` — JD → structured signals pipeline (anti-hallucination layer)
+- `scoring.md` — Three-score system (Fit + Opportunity + Interview Probability)
+- `decision_engine.md` — Reasoning requirements for all action decisions
+
+### CRM
+Relationship management — the warm-first philosophy in action.
+- `networking_crm.md` — Contact tracking & 8-state pipeline
+- `networking_strategy.md` — Path strength classification & outreach tactics
+- `interview_pipeline.md` — Interview stage tracking & prep task generation
+
+### System
+Operational infrastructure — constraints, learning, and output.
+- `guardrails.md` — Hard constraints & anti-patterns (8 rules)
+- `learning_loop.md` — Continuous learning system & adaptive thresholds
+- `output-formats.md` — CSV schema, Action Packs, Google Sheets injection
+- `onboarding.md` — First-run setup flow
+
+### Targeting
+Pre-search intelligence — who to search and where.
+- `company_targeting.md` — Dynamic company queue with cadence tiers
+- `url_triage.md` — URL pre-triage & liveness checking (Phases 3.5–3.7)
+- `linkedin-company-filters.md` — LinkedIn company ID registry
+
+---
+
 ## AI Patterns & Techniques
 
-This project is a case study in building reliable AI agent systems. Here are the transferable patterns, each battle-tested across 19 execution runs:
+This project is a case study in building reliable AI agent systems. Here are the transferable patterns, each battle-tested across 19+ execution runs:
 
 ### 1. Lazy-Loading References (Context Window Management)
 ```
@@ -45,7 +118,7 @@ This project is a case study in building reliable AI agent systems. Here are the
 
     Problem: A single 30K-token prompt fills the context window
              before the agent does any actual work.
-    Solution: Main file is a lightweight orchestrator. Reference
+    Solution: Main file is a lightweight orchestrator. 17 reference
               files load only when their phase executes.
     Result: ~80% context window available for actual task execution.
 ```
@@ -56,6 +129,7 @@ This project is a case study in building reliable AI agent systems. Here are the
 
     Raw JD ──► Score            Raw JD ──► Extract ──► Score
                                            Signals
+
     "Read this and                "Extract these      "Score these
      give me a                     specific fields     typed fields
      number"                       into this schema"   using this rubric"
@@ -99,6 +173,7 @@ Natural language state machines give AI agents the same lifecycle guarantees as 
     │  • Minimum Fit score 65 to apply                │
     │  • Cooldown enforcement between applications    │
     │  • Black hole detection (5+ apps, 0 interviews) │
+    │  • Protect application budgets at key companies  │
     └─────────────────────────────────────────────────┘
 
     Without guardrails, the agent optimizes for volume.
@@ -107,65 +182,56 @@ Natural language state machines give AI agents the same lifecycle guarantees as 
 
 ---
 
-## What I Learned Building This
+## The Three-Score System
 
-This project was an exploration of what happens when you treat an AI agent as a collaborative partner rather than a tool. Some observations:
+Every role gets scored on three independent dimensions:
 
-1. **Structure matters more than intelligence**. Claude is already smart enough to evaluate job descriptions. What it needs is a framework — scoring rubrics, decision trees, state machines — to apply that intelligence consistently across 50+ roles per session.
+### Fit Score (0-100)
+*"How well does this role match the candidate?"*
 
-2. **State management is the hard problem**. The preferences JSON file is essentially a hand-rolled database. Tracking contacts, cooldowns, interview stages, and learning history across sessions required careful schema design.
+| Dimension | Weight | What It Measures |
+|-----------|--------|-----------------|
+| Level Match | 25 | Seniority alignment |
+| Function Match | 25 | IC vs management, scope |
+| Core Skills | 25 | Technical skill overlap |
+| Domain Transfer | 10 | Industry relevance |
+| GenAI Bonus | 5 | AI/ML component |
+| Recency + Clarity | 10 | JD freshness, specificity |
 
-3. **Prompt engineering is software engineering**. This project has version control, modular architecture, defined interfaces between components, and test-equivalent verification steps. The only difference is the "code" is natural language.
+### Opportunity Score (0-100)
+*"How good is this opportunity independent of fit?"*
 
-4. **The 80/20 of job searching is relationships**. Building the CRM and networking strategy components had more impact on actual job search outcomes than optimizing the scoring algorithm.
+Five pillars: Culture & Growth (15%), Compensation (25%), Role Leverage (20%), Speed-to-Hire (20%), ATS Friction (20%).
 
-5. **AI agents need guardrails, not just goals**. Without explicit constraints (max applications/day, minimum fit scores, cooldown enforcement), the system would optimize for volume over quality.
+### Interview Probability (0-100)
+*"What are the realistic chances of getting an interview?"*
+
+IP incorporates 20+ signals including networking path strength (+20 for strong referral), posting age decay, company hiring velocity, ATS complexity, and accumulated learning from past outcomes.
+
+### Action Gates
+
+Scores combine into four action classifications:
+
+| Gate | Criteria | What Happens |
+|------|----------|-------------|
+| **APPLY NOW** | Strong path AND IP>=60 AND Fit>=70 AND Opp>=65 | Full application package generated |
+| **NETWORK FIRST** | Fit>=65 AND IP>=50 but needs warm intro | Referral search plan created |
+| **HOLD** | Promising but missing something | Decision gate + timeline set |
+| **SKIP** | IP<40 AND weak network AND Fit<70 | Logged and archived |
 
 ---
 
-## Why This Exists
+## What I Learned Building This
 
-Traditional job searching is broken:
+1. **Structure matters more than intelligence.** Claude is already smart enough to evaluate job descriptions. What it needs is a framework — scoring rubrics, decision trees, state machines — to apply that intelligence consistently across 50+ roles per session.
 
-- You spend hours scrolling job boards, reading the same boilerplate JDs
-- You apply to everything, hear back from almost nothing
-- You lose track of who you talked to, which roles you applied for, and what follow-ups are due
-- You have no systematic way to learn from what works and what doesn't
+2. **State management is the hard problem.** Tracking contacts, cooldowns, interview stages, and learning history across sessions required careful schema design — all in a single JSON file.
 
-This skill addresses all of that by giving Claude a structured framework to operate as your personal job search agent — discovering opportunities, evaluating fit, managing relationships, and learning from outcomes over time.
+3. **Prompt engineering is software engineering.** This project has version control, modular architecture, defined interfaces between components, and test-equivalent verification steps. The only difference is the "code" is natural language.
 
-### Manual Job Search vs. AI-Assisted
+4. **The 80/20 of job searching is relationships.** Building the CRM and networking strategy components had more impact on actual job search outcomes than optimizing the scoring algorithm.
 
-```
-┌─────────────────────────────────┐    ┌─────────────────────────────────┐
-│        MANUAL JOB SEARCH        │    │      AI-ASSISTED JOB SEARCH     │
-│                                 │    │                                 │
-│  1. Open 5 job boards           │    │  1. Say "run my job search"     │
-│  2. Search keywords manually    │    │  2. Agent searches 4 channels   │
-│  3. Read 50 JDs (2 hrs)         │    │     in parallel                 │
-│  4. Gut-feel "this looks good"  │    │  3. Signal extraction on each   │
-│  5. Apply to 20 roles           │    │     JD (structured, typed)      │
-│  6. Forget to follow up         │    │  4. Three-score evaluation      │
-│  7. Lose track of contacts      │    │     (Fit + Opportunity + IP)    │
-│  8. No idea what's working      │    │  5. Action gate: APPLY NOW /    │
-│                                 │    │     NETWORK FIRST / HOLD / SKIP │
-│  Result:                        │    │  6. CRM tracks all contacts     │
-│  • 0-5% response rate           │    │  7. Auto follow-up reminders    │
-│  • No learning across cycles    │    │  8. Learning loop adjusts       │
-│  • Burnout after 2 weeks        │    │     strategy each run           │
-│                                 │    │                                 │
-│  Time: ~3 hrs/session           │    │  Result:                        │
-│  Signal: low                    │    │  • Warm channels: 80-100%       │
-│  Memory: none                   │    │  • Adapts from every outcome    │
-│                                 │    │  • Sustainable over months      │
-│                                 │    │                                 │
-│                                 │    │  Time: ~20 min oversight        │
-│                                 │    │  Signal: high (structured)      │
-│                                 │    │  Memory: persistent JSON state  │
-└─────────────────────────────────┘    └─────────────────────────────────┘
-```
-
-**The core insight**: Warm channels (referrals, networking) convert at 80-100%, while cold applications convert at 0-5%. The entire system is designed around this reality.
+5. **AI agents need guardrails, not just goals.** Without explicit constraints, the system would optimize for volume over quality. Every guardrail exists because the agent *actually did* the thing it prevents.
 
 ---
 
@@ -175,7 +241,7 @@ This skill addresses all of that by giving Claude a structured framework to oper
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       JOB SEARCH AI SKILL v15                               │
+│                       JOB SEARCH AI SKILL v16.11                            │
 │                                                                             │
 │   ┌───────────┐     ┌──────────────┐     ┌──────────────┐                  │
 │   │  DISCOVER │────►│   EVALUATE   │────►│     ACT      │                  │
@@ -212,110 +278,27 @@ This skill addresses all of that by giving Claude a structured framework to oper
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Three Integrated Domains
-
-**1. Opportunity Discovery** — The search engine. Runs 4 parallel channels to find roles:
-
-| Channel | Method | Best For |
-|---------|--------|----------|
-| Career Sites | Direct company site scraping | Targeted companies |
-| LinkedIn Jobs | Browser automation + JS extraction | Broad discovery |
-| Boolean/ATS | Greenhouse, Lever, Ashby API patterns | Hidden roles |
-| LinkedIn Posts | Recruiter/HM post mining | Warm leads |
-
-**2. Relationship CRM** — Tracks every contact through an 8-state pipeline:
-
-```
-DISCOVERED → CONTACT_IDENTIFIED → OUTREACH_SENT → RESPONSE_RECEIVED
-    → REFERRAL_SECURED → APPLICATION_SUBMITTED → INTERVIEW_STAGE → CLOSED
-```
-
-**3. Interview Pipeline** — Manages active interviews with stage tracking, auto-generated prep tasks, and thank-you note management.
-
 ---
 
-## The Three-Score System
+## Evolution: What Broke & What I Fixed
 
-Every role gets scored on three independent dimensions:
+This skill has gone through 16 major versions and 19+ execution runs. Here's the real story:
 
-### Fit Score (0-100)
-*"How well does this role match the candidate?"*
+| Version | What Changed | What Broke | How I Fixed It |
+|---------|-------------|------------|----------------|
+| **v1-3** | Basic job scraping + simple scoring | Scores were random — same JD got different scores each run | Signal extraction: force structured intermediate before scoring |
+| **v4-6** | Multi-channel search, signal extraction | Single massive prompt (~30K tokens) filled context window | Modular architecture: split into reference files with lazy-loading |
+| **v7-9** | Three-score system, action gates | Too strict — 0 APPLY NOW results on most runs | Adaptive thresholds with hard floors |
+| **v10-12** | Networking CRM, relationship tracking | Contacts "jumped" states in the CRM pipeline | Enforced state machine with explicit transition rules in prose |
+| **v13-14** | Interview pipeline, browser automation | LinkedIn scraping broke on DOM changes | Switched to accessibility tree parsing with fallback chains |
+| **v15** | Full integration, adaptive learning | Channel 4 had zero yield on weekends; learning loop overreacted | Time-aware expectations + dampened learning rate (3+ data points) |
+| **v16.x** | Company targeting, keyword engine, URL triage, LinkedIn company filters | Pre-search phases were manual and inconsistent; dead URLs wasted context | Added 5 new modules: automated company tiering, keyword intelligence, URL pre-triage, company ID registry, multi-channel search orchestrator |
 
-| Dimension | Weight | What It Measures |
-|-----------|--------|-----------------|
-| Level Match | 25 | Seniority alignment |
-| Function Match | 25 | IC vs management, scope |
-| Core Skills | 25 | Technical skill overlap |
-| Domain Transfer | 10 | Industry relevance |
-| GenAI Bonus | 5 | AI/ML component |
-| Recency + Clarity | 10 | JD freshness, specificity |
+### Recurring Themes
 
-### Opportunity Score (0-100)
-*"How good is this opportunity independent of fit?"*
-
-Five pillars: Culture & Growth (15%), Compensation (25%), Role Leverage (20%), Speed-to-Hire (20%), ATS Friction (20%).
-
-### Interview Probability (0-100)
-*"What are the realistic chances of getting an interview?"*
-
-This is where the system gets interesting. IP incorporates 23 signals including networking path strength (+20 for strong referral), posting age decay, company hiring velocity, ATS complexity, and accumulated learning from past outcomes.
-
-### Action Gates
-
-Scores combine into four action classifications:
-
-| Gate | Criteria | What Happens |
-|------|----------|-------------|
-| **APPLY NOW** | Strong path AND IP>=60 AND Fit>=70 AND Opp>=65 | Full application package generated |
-| **NETWORK FIRST** | Fit>=65 AND IP>=50 but needs warm intro | Referral search plan created |
-| **HOLD** | Promising but missing something | Decision gate + timeline set |
-| **SKIP** | IP<40 AND weak network AND Fit<70 | Logged and archived |
-
----
-
-## Signal Extraction Pipeline
-
-Before scoring, every JD goes through structured signal extraction (Phase 4.5). This prevents the "read the JD and guess" failure mode by converting unstructured text into four categories of typed signals:
-
-```
-Raw JD Text
-    │
-    ▼
-┌─────────────────────────────────────┐
-│         Signal Extraction           │
-│                                     │
-│  Role Signals                       │
-│    • seniority, scope, IC/mgmt      │
-│                                     │
-│  Domain Signals                     │
-│    • 8 domain types with keywords   │
-│                                     │
-│  Technology Signals                 │
-│    • match strength per skill       │
-│    • direct / transferable / gap    │
-│                                     │
-│  Company Signals                    │
-│    • growth stage, hiring urgency   │
-│    • ATS type, team maturity        │
-└─────────────────────────────────────┘
-    │
-    ▼
-  Scoring (uses signals, not raw text)
-```
-
-This separation ensures scoring is consistent, auditable, and doesn't double-count signals.
-
----
-
-## The Learning Loop
-
-The system gets smarter over time by tracking outcomes across multiple dimensions:
-
-- **Channel Performance**: Which sourcing channels produce interviews? (e.g., "LinkedIn warm intros: 3 interviews from 5 outreach = 60% conversion")
-- **Cluster Outcomes**: Which types of roles convert? (e.g., "Growth Analytics roles: 2/8 interview rate -> apply -5 IP penalty")
-- **Hot/Cold Patterns**: Which companies respond vs ghost? Track as "hot" or "black hole"
-- **Score Calibration**: If high-scored roles don't convert, adjust weights. If low-scored roles surprise, investigate why.
-- **Adaptive Thresholds**: When too few roles pass APPLY NOW gates, the system automatically lowers thresholds (with hard floors) rather than producing empty results.
+- **The biggest improvements came from adding structure, not intelligence.** Claude was always smart enough. The failures were in consistency, not capability.
+- **Every "AI problem" was actually a systems design problem.** Hallucinated scores? Add structured signals. Context overflow? Add lazy-loading. Inconsistent state? Add a state machine.
+- **Guardrails are features, not limitations.** Every constraint was added because the agent *actually did* the thing it prevents.
 
 ---
 
@@ -329,80 +312,39 @@ Lightweight. Checks CRM follow-ups, interview pipeline updates, and manages outr
 
 ---
 
-## Guardrails
-
-The system includes hard constraints to prevent counterproductive behavior:
-
-- **No spray-and-pray**: Max 3 applications/day, minimum Fit 65
-- **No recruiter spam**: Max 2 outreach messages/week per company
-- **Auto-SKIP low probability**: IP<40 AND weak network AND Fit<70
-- **Respect cooldowns**: If you recently applied to a company, enforce the waiting period
-- **Warm-first always**: If a warm channel exists, use it (80-100% vs 0-5%)
-- **Black hole detection**: 5+ applications with 0 interviews -> company gets flagged
-
----
-
-## Evolution: What Broke & What I Fixed
-
-This skill has gone through 15 major versions and 19 execution runs. Here's the real story — not just what was built, but what failed and why:
-
-| Version | What Changed | What Broke | How I Fixed It |
-|---------|-------------|------------|----------------|
-| **v1-3** | Basic job scraping + simple scoring | Scores were random — same JD got different scores each run. No consistency. | Led to signal extraction (v4): force structured intermediate before scoring. |
-| **v4-6** | Multi-channel search, signal extraction | Single massive prompt (~30K tokens) filled context window before any work happened. Claude would "forget" later phases. | Modular architecture: split into 13 files with lazy-loading. Main file became a lightweight orchestrator. |
-| **v7-9** | Three-score system, action gates | Scoring was too strict — produced 0 APPLY NOW results on most runs. Users would manually override everything. | Adaptive thresholds with hard floors. System auto-relaxes criteria when pipeline runs dry, but never below empirical minimums. |
-| **v10-12** | Networking CRM, relationship tracking | Contacts would "jump" states — going from DISCOVERED to REFERRAL_SECURED without outreach. CRM data was inconsistent. | Enforced state machine with explicit transition rules in prose. Added validation checks. |
-| **v13-14** | Interview pipeline, learning loop, browser automation | LinkedIn scraping broke constantly — DOM changes, rate limiting, auth walls. | Switched to accessibility tree parsing (a11y) for robustness. Added fallback chains per channel. |
-| **v15** | Full integration, adaptive everything | Channel 4 (LinkedIn posts) had near-zero yield on weekends. Learning loop was too aggressive — one bad run would tank a good channel's score. | Time-aware expectations ("Sunday → expect low Ch4 yield"). Dampened learning rate: changes require 3+ data points, not 1. |
-
-### Recurring Themes
-
-- **The biggest improvements came from adding structure, not intelligence.** Claude was always smart enough. The failures were in consistency, not capability.
-- **Every "AI problem" was actually a systems design problem.** Hallucinated scores? Add structured signals. Context overflow? Add lazy-loading. Inconsistent state? Add a state machine.
-- **Guardrails are features, not limitations.** Every constraint was added because the agent *actually did* the thing it prevents. Max 3 applications/day exists because the system once tried to submit 15.
-
----
-
-## Limitations & Known Failure Modes
-
-Honest assessment of where the system struggles:
-
-### Structural Limitations
-- **Single-user design**: The preferences schema, scoring weights, and domain clusters are all tuned for one person's job search. Adapting for a different role/seniority requires significant reconfiguration.
-- **No real-time collaboration**: The system runs as a single-threaded pipeline. You can't have multiple concurrent searches or parallel CRM updates.
-- **Browser dependency**: Channels 2 and 4 (LinkedIn) require Cowork mode with browser access. Without it, you lose ~50% of sourcing coverage.
-
-### AI-Specific Failure Modes
-- **Signal extraction is only as good as the JD**: Vague or short JDs produce weak signals, which produce unreliable scores. The system has no way to flag "this JD is too vague to score reliably."
-- **Learning loop cold start**: The first 3-5 runs have no historical data, so adaptive adjustments don't kick in. Early runs are essentially flying blind on channel/cluster performance.
-- **Hallucination risk on company intelligence**: When Claude is asked to assess a company's growth stage or hiring velocity without concrete data, it may confabulate. The signal extraction helps but doesn't eliminate this.
-- **Context window pressure on large runs**: Processing 40+ roles in a single session can push against context limits even with lazy-loading. The system doesn't gracefully degrade — it just starts dropping information.
-
-### Operational Gotchas
-- **LinkedIn DOM changes**: Browser-based channels break when LinkedIn updates their UI. Typically requires updating CSS selectors or a11y tree paths.
-- **Google Sheets write failures**: The Apps Script injection approach is fragile — browser state, sheet permissions, or script size limits can cause silent failures.
-- **Stale preferences**: If the JSON preferences file gets corrupted or out-of-date, there's no automatic recovery. Manual intervention required.
-
----
-
 ## File Structure
 
 ```
 skill/
-├── SKILL.md                          # Main execution guide (10-phase pipeline)
-└── references/
-    ├── career-sites.md               # Company-specific navigation patterns
-    ├── decision_engine.md            # Reasoning requirements for all decisions
-    ├── guardrails.md                 # Hard constraints and anti-patterns
-    ├── interview_pipeline.md         # Interview stage tracking & prep tasks
-    ├── learning_loop.md              # Continuous learning system
+├── SKILL.md                          # Main orchestrator (10-phase pipeline)
+└── references/                       # 17 domain-specific modules
+    │
+    │  # Search cluster
+    ├── channel_search.md             # Multi-channel search orchestrator
+    ├── career-sites.md               # Company-specific navigation & ATS patterns
     ├── linkedin-browser.md           # LinkedIn browser automation (Ch 2 & 4)
+    ├── keyword_engine.md             # Keyword intelligence engine (Phase 2B)
+    │
+    │  # Intelligence cluster
+    ├── signal_extraction.md          # JD → structured signals pipeline
+    ├── scoring.md                    # Three-score system & action gates
+    ├── decision_engine.md            # Reasoning requirements for decisions
+    │
+    │  # CRM cluster
     ├── networking_crm.md             # Contact tracking & 8-state pipeline
     ├── networking_strategy.md        # Path strength classification
+    ├── interview_pipeline.md         # Interview stage tracking & prep tasks
+    │
+    │  # System cluster
+    ├── guardrails.md                 # Hard constraints & anti-patterns
+    ├── learning_loop.md              # Continuous learning system
+    ├── output-formats.md             # CSV schema, Action Packs, Google Sheets
     ├── onboarding.md                 # First-run setup flow
-    ├── output-formats.md             # CSV schema, Action Pack, Google Sheets
-    ├── scoring.md                    # Three-score system & action gates
-    └── signal_extraction.md          # JD → structured signals pipeline
+    │
+    │  # Targeting cluster
+    ├── company_targeting.md          # Dynamic company queue & cadence tiers
+    ├── url_triage.md                 # URL pre-triage & liveness (Phases 3.5-3.7)
+    └── linkedin-company-filters.md   # LinkedIn company ID registry
 ```
 
 ---
@@ -437,31 +379,20 @@ The system will walk you through onboarding (first time) or execute the full dis
 
 ---
 
-## Design Decisions & Lessons Learned
+## Limitations & Known Failure Modes
 
-### Why a Skill, Not a Traditional App?
+### Structural Limitations
+- **Single-user design**: Scoring weights and domain clusters are tuned for one person's job search. Adapting for a different role/seniority requires reconfiguration.
+- **Browser dependency**: Channels 2 and 4 (LinkedIn) require Cowork mode with browser access. Without it, you lose ~50% of sourcing coverage.
 
-A skill is essentially a prompt — a structured set of instructions that gives Claude domain expertise. This approach has several advantages over building a traditional application:
+### AI-Specific Failure Modes
+- **Signal extraction quality depends on JD quality**: Vague JDs produce weak signals and unreliable scores.
+- **Learning loop cold start**: First 3-5 runs have no historical data — adaptive adjustments don't kick in until then.
+- **Context window pressure on large runs**: Processing 40+ roles in a single session can push against limits even with lazy-loading.
 
-1. **No infrastructure**: No servers, databases, or deployment pipelines. The "backend" is a JSON preferences file.
-2. **Natural language interface**: Users interact conversationally, not through forms and buttons.
-3. **Adaptive execution**: Claude can adjust the pipeline based on context (Sunday night -> expect fewer recruiter posts, same-day re-run -> adjust expectations).
-4. **Browser integration**: Through Cowork mode, the skill can directly browse LinkedIn, read JDs, and interact with Google Sheets.
-
-### Why 13 Files Instead of 1?
-
-Early versions were a single massive prompt. This failed because:
-- Claude's context window would fill up with instructions before doing any actual work
-- Changes to one component (e.g., scoring) required re-reading the entire system
-- Reference files load on-demand — the scoring rubric is only loaded during Phase 5
-
-### The Warm-First Philosophy
-
-The most impactful design decision was making networking the primary channel, not an afterthought. The data is clear: cold applications at senior levels have near-zero conversion rates. The entire scoring system, action gates, and CRM are oriented around this reality.
-
-### Adaptive Thresholds
-
-A common failure mode: the scoring system is too strict and produces 0 APPLY NOW results. Rather than forcing users to manually adjust thresholds, the system automatically relaxes criteria (with hard floors) when the pipeline runs dry. This prevents the "perfect is the enemy of good" trap.
+### Operational Gotchas
+- **LinkedIn DOM changes**: Browser-based channels break when LinkedIn updates their UI.
+- **Google Sheets write failures**: Apps Script injection approach is fragile — browser state or permissions can cause silent failures.
 
 ---
 

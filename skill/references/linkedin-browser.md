@@ -28,19 +28,59 @@ Before starting LinkedIn browser searches:
 
 ## Channel 2: LinkedIn Jobs — Browser Workflow
 
+### Step 0: Freshness Sweep (NEW in v16.5 — Do This FIRST)
+
+Before running the standard keyword search, do a quick freshness sweep to catch roles posted in the last 1-6 hours. Being applicant #1-10 instead of #300+ dramatically improves callback odds.
+
+**How it works**: LinkedIn's `f_TPR` URL parameter controls the time filter in seconds:
+- `f_TPR=r3600` = past 1 hour (3,600 seconds)
+- `f_TPR=r7200` = past 2 hours
+- `f_TPR=r21600` = past 6 hours
+- `f_TPR=r86400` = past 24 hours (what "Past 24 hours" filter uses)
+- `f_TPR=r604800` = past week (standard default)
+
+**Freshness sweep URL template**:
+```
+https://www.linkedin.com/jobs/search/?keywords={query}&location={location}&f_TPR=r3600&f_E=4&sortBy=DD
+```
+
+**Procedure**:
+1. For each of your top 3 keyword matrix queries, run the search with `f_TPR=r3600` (past hour)
+2. If 0 results, widen to `f_TPR=r7200` (past 2 hours), then `f_TPR=r21600` (past 6 hours)
+3. Any role found in the freshness sweep gets a **+10 IP "early bird" boost** (on top of the standard +5 recency bonus from scoring.md)
+4. Flag these roles in the Action Pack as "POSTED <{X}h AGO — apply immediately for early-applicant advantage"
+5. After the freshness sweep, proceed with the standard `f_TPR=r604800` search for broader coverage
+
+**Time budget**: 2-3 minutes (3 queries × 1 page each). This is fast because fresh results are few.
+
+**Why this works**: LinkedIn sorts applicants partly by recency. A resume submitted within the first hour gets significantly more recruiter attention than one submitted after 500+ applicants. Combined with our scoring system, this means a Fit 75 role found in its first hour may be more actionable than a Fit 85 role posted 5 days ago with 400 applicants.
+
+**Dedup against standard search**: Roles found in the freshness sweep must be deduped against the standard search results (Step 1-3). If the same role appears in both, keep the freshness-sweep version (it retains the early-bird boost).
+
 ### Step 1: Build Search URLs
 
 Construct LinkedIn Jobs search URLs using the keyword matrix from Phase 2B:
 
+**Standard keyword search** (broad — finds roles across all companies):
 ```
 https://www.linkedin.com/jobs/search/?keywords={query}&location={location}&f_TPR=r604800&f_E=4&sortBy=DD
 ```
 
+**Company-filtered search** (targeted — finds roles at a specific company):
+```
+https://www.linkedin.com/jobs/search/?keywords={query}&f_C={company_ids}&geoId=103644278&f_E=4%2C5&sortBy=DD
+```
+Use this when the company is in `every_run` or `every_other` cadence AND has LinkedIn company IDs in `preferences.linkedin_company_filters`. For priority companies (especially those with referrals), run BOTH a company-filtered search AND the standard keyword search.
+
+> **See `references/linkedin-company-filters.md`** for the full company ID registry, verification steps, and usage guidelines. That file is the authoritative source for all `f_C` mappings.
+
 Key URL parameters:
 - `keywords=` — URL-encoded search query
 - `location=` — e.g., "San Francisco Bay Area", "United States"
-- `f_TPR=r604800` — past week. Use `r2592000` for past month
-- `f_E=4` — mid-senior level. Use `f_E=5` for director
+- `f_C=` — Company ID filter. Look up in `references/linkedin-company-filters.md`
+- `geoId=` — Geographic filter (103644278 = United States, 92000000 = Worldwide)
+- `f_TPR=r604800` — past week. Use `r2592000` for past month. For freshness sweep see Step 0.
+- `f_E=4` — mid-senior level. Use `f_E=5` for director. Use `f_E=4%2C5` for both.
 - `sortBy=DD` — sort by most recent
 
 ### Step 2: Navigate and Extract Results
@@ -130,61 +170,116 @@ LinkedIn throttles automated browsing, but testing shows moderate activity is to
 
 ---
 
-## Channel 4: LinkedIn Recruiter/HM Posts — Browser Workflow
+## Channel 4: LinkedIn Recruiter/HM Posts — Human-Like Browser Workflow
 
 This is the highest-value channel. Recruiter and hiring manager posts represent the warmest leads because the poster is actively looking for candidates and has publicly signaled their intent. Response rates to post-based outreach are 3-5x higher than cold outreach.
 
 > **CRITICAL**: LinkedIn's content search page uses **obfuscated CSS classes** (hashed like `_0eee3437`) and renders post content as **SVGs**, not standard HTML text. This means `document.querySelectorAll` with CSS class selectors **will always return 0 results**. You MUST use `find` and `read_page` (accessibility tree tools) for Channel 4 extraction. These tools read the accessibility layer which LinkedIn maintains regardless of their rendering approach.
 
-### Step 1: Build Content Search URLs
+**Design principle**: Ch4 should mirror how a real person browses LinkedIn for hiring signals — NOT jump mechanically to keyword search URLs. Follow this natural browsing flow in order.
+
+---
+
+### Step A: Home Feed Scan (DO THIS FIRST — warmest leads)
+
+Navigate to `https://www.linkedin.com/feed/`.
+
+Your connections' hiring posts surface here organically. These are the **warmest possible leads** because you already have a 1st-degree connection to the poster. A human always checks their feed first.
+
+**Procedure:**
+1. Navigate to LinkedIn feed
+2. Wait 4 seconds for content to render
+3. Take a screenshot to confirm feed loaded
+4. Use `find` to scan for hiring-related posts:
+   ```
+   find(query="post about hiring or open role or join my team or growing the team", tabId=...)
+   ```
+5. Scroll down (4-6 scroll cycles, 3 sec wait between each):
+   ```
+   scroll(coordinate=[500, 400], scroll_direction="down", scroll_amount=8, tabId=...)
+   ```
+6. After each scroll, run `find` again to catch newly loaded posts
+7. For any hiring-related post, use `read_page` with the post's ref_id to get full details
+
+**What to look for**: Posts mentioning "hiring", "open role", "join my team", "growing the team", "we're looking for", "excited to announce", "new headcount", "backfill". Also watch for people resharing job postings.
+
+**Time budget**: 2-3 minutes. This step often catches posts that keyword search misses because they use informal language.
+
+---
+
+### Step B: Notifications Check (Inbound Signals)
+
+Navigate to `https://www.linkedin.com/notifications/`.
+
+Scan for inbound interest signals — these are leads where someone is already reaching out to YOU:
+- Recruiters viewing your profile (shows as "X from Company viewed your profile")
+- Hiring managers engaging with your content (likes, comments)
+- Connection requests from talent acquisition or recruiting teams
+- Messages from recruiters (note: can't read full messages without clicking in)
+
+**Procedure:**
+1. Navigate to notifications page
+2. Wait 3 seconds
+3. Take a screenshot
+4. Use `read_page` to scan notification items
+5. Extract any relevant recruiter/HM names, companies, and profile URLs
+6. These become immediate CRM contacts with `source: "inbound_signal"` and `path_strength: "strong"`
+
+**Time budget**: 1 minute. Quick scan — don't deep-dive unless something is clearly relevant.
+
+---
+
+### Step C: Targeted Content Search (Keyword-Based)
+
+This is the structured keyword search. Build content search URLs:
 
 ```
 https://www.linkedin.com/search/results/content/?keywords={search_term}&datePosted=%22past-week%22&sortBy=%22date_posted%22
 ```
 
-Recommended search terms (customize from candidate profile keywords):
+**Expanded search terms** (use variety — don't repeat the same pattern):
+
+Role-specific terms:
 - `"hiring data science manager"`
 - `"looking for" "data science" "manager" OR "lead"`
 - `"open role" "analytics" "senior manager"`
-- `"growing my team" "data science" OR "analytics"`
-- `"we're hiring" "data science" "Bay Area" OR "remote"`
-- `"join my team" "analytics" OR "data science"`
 - `"hiring" "head of data science"`
 
-FAST_TRACK: Top 3 search terms, first 10 posts each.
-FULL_ANALYSIS: All terms, first 20 posts each.
+Action-oriented terms:
+- `"we're hiring" "data science" "Bay Area" OR "remote"`
+- `"join my team" "analytics" OR "data science"`
+- `"growing my team" "data science" OR "analytics"`
 
-### Step 2: Navigate and Extract Posts (Accessibility Tree Method)
+Urgency signals:
+- `"backfill" "data science" OR "analytics"`
+- `"immediate hire" "data" OR "analytics" "manager"`
+- `"just opened" "data science" OR "analytics"`
 
-For each search term:
+Team-building signals:
+- `"building a team" "data science" OR "analytics"`
+- `"new team" "data" "hiring"`
+- `"expanding" "data science" OR "analytics" "team"`
 
-1. **Navigate** to the content search URL
-2. **Wait 4 seconds** for feed content to render (content search is slower than job search)
-3. **Take a screenshot** to visually confirm posts loaded
+**Scope:**
+- FAST_TRACK: Top 3 search terms, first 10 posts each.
+- FULL_ANALYSIS: All terms (rotate through at least 8-10), first 20 posts each.
 
-4. **Extract post authors and titles** using `find`:
-```
-find(query="hiring post author name and job title", tabId=...)
-```
-This returns refs for author names (e.g., "Steen Whidden") and their titles (e.g., "Senior Technical Recruiter @ Google | AI & Research Data Science"). The `find` tool reliably extracts these even though CSS selectors fail.
-
-5. **Extract post content** using `find`:
-```
-find(query="post text content about hiring or looking for candidates", tabId=...)
-```
-This returns the text content of hiring-related posts with their ref IDs.
-
-6. **For detailed extraction of a specific post**, use `read_page` with the post's ref_id:
-```
-read_page(tabId=..., ref_id="ref_85", depth=8, max_chars=5000)
-```
-This reveals the full accessibility tree for that post, including:
-- Author name and profile URL (in `link` elements with `href="/in/{username}"`)
-- Author title/headline (in `generic` elements after the name)
-- Post text content (in a `generic` element — usually the longest text block)
-- Engagement metrics (reactions, comments, reposts)
-- Hashtags (in `link` elements with `href` containing `HASH_TAG_FROM_FEED`)
-- "View job" links if the post includes a formal job card
+**For each search term:**
+1. Navigate to the content search URL
+2. Wait 4 seconds for feed content to render (content search is slower than job search)
+3. Take a screenshot to visually confirm posts loaded
+4. Extract post authors and titles using `find`:
+   ```
+   find(query="hiring post author name and job title", tabId=...)
+   ```
+5. Extract post content using `find`:
+   ```
+   find(query="post text content about hiring or looking for candidates", tabId=...)
+   ```
+6. For detailed extraction, use `read_page` with the post's ref_id:
+   ```
+   read_page(tabId=..., ref_id="ref_85", depth=8, max_chars=5000)
+   ```
 
 **Post structure in accessibility tree** (pattern observed March 2026):
 ```
@@ -198,26 +293,60 @@ listitem [ref_N]           ← Each post is a listitem inside main
   button → Like/Comment/Repost/Send actions
 ```
 
-### Step 3: Scroll to Load More Posts (Infinite Scroll)
-
-Channel 4 uses **infinite scroll** — there are NO pagination buttons like Channel 2.
-
-**Scroll procedure**:
-1. After extracting visible posts, use `scroll` action:
+**Scroll to load more** (infinite scroll — no pagination buttons):
+1. After extracting visible posts, scroll down:
    ```
    scroll(coordinate=[500, 400], scroll_direction="down", scroll_amount=8, tabId=...)
    ```
-2. **Wait 3 seconds** for new posts to render
-3. **Take a screenshot** to see newly loaded posts
-4. **Run `find` again** to extract the new posts
-5. **Repeat** until you've collected enough posts or no new content loads
-6. Typically 3-4 scroll cycles loads ~10-15 posts. For FULL_ANALYSIS (20 posts), do 5-6 cycles.
+2. Wait 3 seconds for new posts to render
+3. Take a screenshot to see newly loaded posts
+4. Run `find` again to extract new posts
+5. Repeat until target post count reached or no new content
+6. Typically 3-4 scroll cycles = 10-15 posts. For FA (20 posts), do 5-6 cycles.
 
-**De-duplication**: Posts may repeat across scroll loads. Track seen author+text combinations to avoid duplicates.
+**De-duplication**: Posts may repeat across scroll loads. Track seen author+text combinations.
 
-### Step 4: Convert Posts to Leads
+---
 
-For each relevant hiring post:
+### Step D: Target Company Page Browsing
+
+For your top 3-5 target companies (pull from `learning_history.conversion_rates.by_company` — companies with `interviews >= 1` plus any active networking targets), browse their LinkedIn company pages.
+
+**Procedure:**
+1. Navigate to `https://www.linkedin.com/company/{company-slug}/posts/`
+2. Wait 3 seconds
+3. Take a screenshot
+4. Use `find` to look for hiring-related posts from the company page
+5. Scroll through 2-3 cycles to see recent posts
+6. Companies often announce new roles through official LinkedIn posts BEFORE they hit the career page — this catches roles at the "just opened" stage
+
+**FULL_ANALYSIS only** — skip in FAST_TRACK mode.
+
+---
+
+### Step E: My Network / Job Changes (Referral Mining)
+
+Navigate to `https://www.linkedin.com/mynetwork/`.
+
+**What to look for:**
+- **Recent job changes**: Someone who just joined a target company = warm referral source. They're still in the "excited about new job" phase and more likely to refer.
+- **New hiring managers**: Someone who just got promoted to a management role = potential warm lead with new headcount.
+- **"People you may know"**: Occasionally surfaces relevant connections at target companies.
+
+**Procedure:**
+1. Navigate to My Network page
+2. Wait 3 seconds
+3. Take a screenshot
+4. Use `read_page` to scan for job change notifications and suggested connections
+5. Extract relevant contacts — add to CRM with `source: "network_change"` and appropriate `path_strength`
+
+**FULL_ANALYSIS only** — skip in FAST_TRACK mode.
+
+---
+
+### Step F: Convert Posts to Leads
+
+For each relevant hiring post found across Steps A-E:
 
 1. **Classify the poster**:
    - **Hiring Manager** (has VP/Director/Sr Manager/Head of title at the company) → +15 IP boost
@@ -244,20 +373,21 @@ Best,
 ```
 
 5. **Add poster as a CRM contact** with:
-   - `path_strength`: "moderate" (post-based outreach converts well)
+   - `path_strength`: "moderate" (post-based outreach converts well) — upgrade to "strong" for Step A (feed) and Step B (notifications) leads
    - `outreach_status`: "pending"
-   - `source`: "linkedin_post"
+   - `source`: "linkedin_post" (or "linkedin_feed", "inbound_signal", "network_change" based on step)
    - `profile_url`: extracted from the accessibility tree (`/in/{username}`)
    - `linked_roles`: [the role from the post]
 
-### Step 5: Rate Limiting
+### Step G: Rate Limiting
 
-Content search is slightly less throttled than job search, but still be careful:
-- **Wait 3-4 seconds between search navigations**
-- **Maximum 5-8 content searches per session**
+Be careful across ALL steps — LinkedIn monitors overall session activity, not just search queries:
+- **Wait 3-4 seconds between page navigations**
+- **Maximum 5-8 content searches per session** (Step C)
 - **Scroll slowly** — 3 seconds between scroll actions
+- **Total session time**: Keep Ch4 under 15 minutes to avoid triggering rate limits
 - Stop on any CAPTCHA or unusual activity warnings
-- A good session target: 3-5 search terms × 10-15 posts each = 30-75 posts scanned
+- A good session target: Steps A-E should yield 30-75 posts scanned total
 
 ---
 

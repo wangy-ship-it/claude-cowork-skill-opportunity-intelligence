@@ -27,7 +27,7 @@ This document provides a comprehensive technical walkthrough of the Job Search A
 
 ```
 ╔═════════════════════════════════════════════════════════════════════════════╗
-║                        JOB SEARCH AI SKILL v15                             ║
+║                        JOB SEARCH AI SKILL v16.11                             ║
 ║                                                                            ║
 ║   ╔═══════════════╗     ╔═══════════════╗     ╔═══════════════╗           ║
 ║   ║   DISCOVER    ║     ║   EVALUATE    ║     ║      ACT      ║           ║
@@ -828,7 +828,7 @@ Job Boards / LinkedIn / ATS
 
 ## Module Dependency Graph
 
-How the 13 files relate to each other:
+How the 18 files (1 orchestrator + 17 references) relate to each other:
 
 ```
                               SKILL.md
@@ -837,13 +837,26 @@ How the 13 files relate to each other:
                      │         │         │
             ┌────────┘         │         └────────┐
             ▼                  ▼                  ▼
-     ┌─────────────┐    ┌────────────┐    ┌──────────────┐
-     │ onboarding  │    │career-sites│    │linkedin-     │
-     │ (first run) │    │(Ch1 + Ch3) │    │browser       │
-     └─────────────┘    └─────┬──────┘    │(Ch2 + Ch4)   │
-                              │           └──────┬───────┘
+     ┌─────────────┐  ┌───────────────┐   ┌──────────────┐
+     │ onboarding  │  │company_       │   │keyword_      │
+     │ (first run) │  │targeting      │   │engine        │
+     └─────────────┘  │(Phase 0.5)    │   │(Phase 2B)    │
+                      └───────┬───────┘   └──────┬───────┘
+                              │                  │
                               └──────┬───────────┘
                                      ▼
+                    ┌────────────┐ ┌────────────┐ ┌──────────────┐
+                    │career-sites│ │channel_    │ │linkedin-     │
+                    │(Ch1 + Ch3) │ │search      │ │browser       │
+                    └─────┬──────┘ │(Phase 3)   │ │(Ch2 + Ch4)   │
+                          │        └─────┬──────┘ └──────┬───────┘
+                          └──────────────┼───────────────┘
+                                         ▼
+                    ┌────────────────────────────────────┐
+                    │url_triage (Phases 3.5-3.7)         │
+                    │linkedin-company-filters (Ch2 IDs)  │
+                    └───────────────┬────────────────────┘
+                                    ▼
                            ┌──────────────────┐
                            │signal_extraction │
                            │  (Phase 4.5)     │

@@ -91,6 +91,29 @@ https://apply.careers.microsoft.com/careers?query={search_term}&start={offset}&l
 - URLs contain job IDs
 - Many roles list as "Remote, US" with office options
 
+## DoorDash
+
+**Careers URL**: `https://careersatdoordash.com`
+
+**Search URL pattern**:
+```
+https://careersatdoordash.com/job-search/?keyword={search_term}
+```
+
+**Job URL pattern**: `https://careersatdoordash.com/job-search/?id={job_id}` (7-digit IDs like 3313445)
+
+**Key notes**:
+- Proprietary ATS — no Greenhouse/Ashby/Lever API (all 4 ATS probes return 404)
+- Search supports keyword and location filters; "Expand Filter Options" reveals department/function filters
+- Job IDs are visible on the search results page under each listing
+- Department "Analytics & Data Science" and Function "Data Science" are the key filters for DS roles
+- **Dual URL/ID system**: Search results show `Job ID: 3313445` but individual job page URLs use a DIFFERENT ID: `/jobs/{slug}/7454878/`. These are NOT the same number. When cross-referencing, use the Job ID from search results.
+- **Career site uses STRICT keyword matching** — unlike LinkedIn's fuzzy search. "data science" returns 1 result (Brazil only). "analytics" returns 13. "strategy" returns 61. Always try multiple keywords.
+- **March 2026 status**: DS Analytics team in core verticals (GTM, Consumer Growth, Grocery, Drive) froze hiring. Ads & Promotions Analytics vertical still active. Multiple active roles: Sr Manager Ads & Promotions Analytics (3313445), Manager Rx Advertiser Analytics (3351334), Procurement Manager Analytics (3359010)
+- LinkedIn company ID: `f_C=3205573` (verified March 2026). NOTE: Previously listed as `f_C=2520` — this was incorrect.
+- **Title vocabulary** (v16.7): HIGH YIELD: "analytics", "insights", "strategy". LOW YIELD: "data science", "manager data". DoorDash titles most data roles under "Analytics" not "Data Science" — this is the single most important thing to know about searching their career site.
+- **Team-level hiring status**: Ads & Promotions Analytics = active hiring | DS Analytics (Core) = freeze | Strategy & Ops = active hiring (61 results for "strategy")
+
 ## Salesforce
 
 **Careers URL**: `https://careers.salesforce.com`
@@ -110,7 +133,19 @@ Many companies use the same Applicant Tracking Systems:
 - **iCIMS**: URL contains `icims.com`. Older UI, may need more manual navigation.
 - **Taleo**: URL contains `taleo.net`. Legacy system, clunky but functional.
 
-## LinkedIn Job Board
+## LinkedIn (the company) — Career Site
+
+**Careers URL**: `https://careers.linkedin.com`
+
+**Redirect pattern**: LinkedIn's career site does NOT have inline search. The "Search Jobs" button redirects to LinkedIn's own job board with company filters pre-applied. Use company-filtered LinkedIn search instead.
+
+**Key notes**:
+- Proprietary ATS — no Greenhouse/Ashby/Lever API
+- Must search via LinkedIn job board with `f_C` company filter
+- See `references/linkedin-company-filters.md` for LinkedIn's company IDs and the redirect pattern details
+- Company page: `https://www.linkedin.com/company/linkedin/jobs/`
+
+## LinkedIn Job Board (general — all companies)
 
 **URL**: `https://www.linkedin.com/jobs/`
 
@@ -118,10 +153,8 @@ Many companies use the same Applicant Tracking Systems:
 ```
 https://www.linkedin.com/jobs/search/?keywords={query}&location={location}&f_TPR=r604800&position=1&pageNum={page}
 ```
-- `f_TPR=r604800` = past week filter (604800 seconds = 7 days)
-- `f_TPR=r2592000` = past month filter
-- `f_E=4` = mid-senior level filter
-- `f_E=5` = director level filter
+
+**Company-filtered search**: Use `f_C={company_ids}` to filter to a specific company. See `references/linkedin-company-filters.md` for the full company ID registry, URL template, verification steps, and known wrong IDs.
 
 **Key notes**:
 - LinkedIn requires login for full results — ensure you're logged in before searching

@@ -1,6 +1,6 @@
 # Output Formats — CSV, Action Pack, Summary Report, Google Sheet
 
-## CSV Columns (26 columns, A-Z)
+## CSV Columns (27 columns, A-AA)
 
 | Col | Header | Content | Format |
 |-----|--------|---------|--------|
@@ -25,19 +25,20 @@
 | S | Stage | Pipeline stage | "New" (auto-filled) |
 | T | Next Action | What to do next | See below |
 | U | Next Action Date | When | M/D/YYYY |
-| V | Applied | Has applied? | FALSE (→ checkbox) |
-| W | Interview | Got interview? | FALSE (→ checkbox) |
-| X | Referral | Has referral? | FALSE (→ checkbox) |
-| Y | Resume Ver | Version used | v{run}_T{tier}_{company} |
-| Z | JD Hash | JD snapshot filename | e.g. apple_215438_2-23-2026_1430.txt |
+| V | Networked | Networking contact identified? | FALSE (→ checkbox) |
+| W | Applied | Has applied? | FALSE (→ checkbox) |
+| X | Interview | Got interview? | FALSE (→ checkbox) |
+| Y | Referral | Has referral? | FALSE (→ checkbox) |
+| Z | Resume Ver | Version used | v{run}_T{tier}_{company} |
+| AA | JD Hash | JD snapshot filename | e.g. apple_215438_2-23-2026_1430.txt |
 
 ### Auto-filling Next Action
-| Action | Stage | Next Action | Date |
-|--------|-------|-------------|------|
-| APPLY NOW | New | "Apply with tailored resume — see Action Pack" | Today |
-| NETWORK FIRST | New | "Network into {Company} — find referral" | Today + 2 days |
-| HOLD | New | "Find referral or networking contact" | Today + 3 days |
-| SKIP | New | "Skip — revisit only if situation changes" | N/A |
+| Action | Stage | Next Action | Date | Networked |
+|--------|-------|-------------|------|-----------|
+| APPLY NOW | New | "Apply with tailored resume — see Action Pack" | Today | false |
+| NETWORK FIRST | New | "Network into {Company} — find referral" | Today + 2 days | false |
+| HOLD | New | "Find referral or networking contact" | Today + 3 days | false |
+| SKIP | New | "Skip — revisit only if situation changes" | N/A | false |
 
 ### Key Strengths Format
 Start with match label, then semicolons for specific evidence-based reasons (3-6):
@@ -246,7 +247,7 @@ FILES:
 
 ### ═══ MANDATORY: Column-to-Array Position Mapping ═══
 
-**This mapping is the single source of truth for Apps Script data arrays.** Every row written to the sheet MUST have exactly 26 values in this exact order. This exists because Run 16's write failed due to a missing Location column (F) and extra description fields, which shifted all downstream columns and corrupted 4 rows of data.
+**This mapping is the single source of truth for Apps Script data arrays.** Every row written to the sheet MUST have exactly 27 values in this exact order. This exists because Run 16's write failed due to a missing Location column (F) and extra description fields, which shifted all downstream columns and corrupted 4 rows of data.
 
 ```
 Array Index → Column → Header            → Type     → Example Value
@@ -272,13 +273,14 @@ Array Index → Column → Header            → Type     → Example Value
 [18]        → S      → Stage               → String   → "New"
 [19]        → T      → Next Action         → String   → "Network into Company — find referral"
 [20]        → U      → Next Action Date    → String   → "3/14/2026" (M/D/YYYY; "N/A" for SKIP)
-[21]        → V      → Applied             → Boolean  → false
-[22]        → W      → Interview            → Boolean  → false
-[23]        → X      → Referral             → Boolean  → false
-[24]        → Y      → Resume Ver           → String   → "" (or "v16_T1_meta")
-[25]        → Z      → JD Hash              → String   → "" (or "meta_12345_3-7-2026_1430.txt")
+[21]        → V      → Networked            → Boolean  → false
+[22]        → W      → Applied              → Boolean  → false
+[23]        → X      → Interview            → Boolean  → false
+[24]        → Y      → Referral             → Boolean  → false
+[25]        → Z      → Resume Ver           → String   → "" (or "v16_T1_meta")
+[26]        → AA     → JD Hash              → String   → "" (or "meta_12345_3-7-2026_1430.txt")
 ─────────────────────────────────────────────────────────────────────
-TOTAL: Exactly 26 values per row. No more, no less.
+TOTAL: Exactly 27 values per row. No more, no less.
 ```
 
 ### ═══ COMMON MISTAKES TO AVOID ═══
@@ -288,14 +290,16 @@ These mistakes have occurred in past runs and MUST be prevented:
 1. **Missing Location (F)**: Do NOT skip the Location column. Every role MUST have a location string at index [5]. If location is unknown, use "Unknown".
 2. **Extra description fields**: Columns P (Key Strengths) and Q (Potential Gaps) are the ONLY two text description columns. Do NOT split descriptions into multiple columns (e.g., separate "company note", "match summary", "networking note" fields). Consolidate ALL strength/match info into one string at [15] and ALL gap/risk info into one string at [16].
 3. **Scores as strings**: Fit Score [9], Opportunity Score [10], and Interview Prob [11] MUST be integers, not strings. Write `82` not `"82"`.
-4. **Column count mismatch**: If your array has != 26 elements, STOP and fix it before writing. Count elements explicitly.
+4. **Column count mismatch**: If your array has != 27 elements, STOP and fix it before writing. Count elements explicitly.
 5. **Networking/strategy text in wrong columns**: Networking path info, strategy notes, company commentary — all go inside P (strengths) or Q (gaps) or T (next action). Never create extra columns for them.
 
 ### Writing Data
 
-Use Monaco API to inject Apps Script. **Copy the template below exactly — only replace the data values, never the structure.**
+**v16.11**: The data arrays for the sheet write should come from the pre-computed csv_row arrays stored in `scored_run{N}.json` (written in Phase 8.7). These arrays were built and validated during Phase 6F while scoring context was fresh. Phase 9 reads them from the checkpoint file rather than reconstructing from memory — this is the primary reliability improvement for the sheet write.
 
-**BEFORE generating the data array**: For each role, lay out all 26 values in order (A through Z) using the mapping table above. Verify the count is exactly 26 before adding the row to the data array.
+Use Monaco API to inject Apps Script. **v16.5**: Pre-built templates are available in `scripts/` — use them instead of writing inline. See `scripts/sheet_writer_template.js` and `scripts/inject_and_run.py` for the parameterized approach. If templates are unavailable, copy the template below exactly — only replace the data values, never the structure.
+
+**BEFORE injecting**: Read csv_row arrays from `scored_run{N}.json`. Verify the count is exactly 27 per row before adding to the data array. The Python helper `scripts/inject_and_run.py` does this validation automatically.
 
 ```javascript
 // In Apps Script editor tab via javascript_tool
@@ -306,23 +310,24 @@ const code = `function addJobData() {
   var lastRow = sheet.getLastRow();
   var startRow = lastRow + 1;
   var data = [
-    // EXACTLY 26 values per row. Column letters for reference:
-    // [A:SearchDate, B:Rank, C:Action, D:Title, E:Salary, F:Location, G:Company, H:Team, I:Posted, J:Fit, K:Opp, L:IP, M:Uplevel, N:Downlevel, O:Bucket, P:Strengths, Q:Gaps, R:URL, S:Stage, T:NextAction, U:NextDate, V:Applied, W:Interview, X:Referral, Y:ResumeVer, Z:JDHash]
-    ["3/7/2026", 1, "APPLY NOW", "Data Science Manager", "200000-300000", "San Francisco, CA (Hybrid)", "Meta", "Reality Labs", "3/1/2026", 82, 78, 65, "LOW", "LOW", "A", "STRONG MATCH: analytics leadership; experimentation expertise", "Consumer vs B2B background", "https://example.com/job/123", "New", "Apply with tailored resume — see Action Pack", "3/7/2026", false, false, false, "", ""]
+    // EXACTLY 27 values per row. Column letters for reference:
+    // [A:SearchDate, B:Rank, C:Action, D:Title, E:Salary, F:Location, G:Company, H:Team, I:Posted, J:Fit, K:Opp, L:IP, M:Uplevel, N:Downlevel, O:Bucket, P:Strengths, Q:Gaps, R:URL, S:Stage, T:NextAction, U:NextDate, V:Networked, W:Applied, X:Interview, Y:Referral, Z:ResumeVer, AA:JDHash]
+    ["3/7/2026", 1, "APPLY NOW", "Data Science Manager", "200000-300000", "San Francisco, CA (Hybrid)", "Meta", "Reality Labs", "3/1/2026", 82, 78, 65, "LOW", "LOW", "A", "STRONG MATCH: analytics leadership; experimentation expertise", "Consumer vs B2B background", "https://example.com/job/123", "New", "Apply with tailored resume — see Action Pack", "3/7/2026", false, false, false, false, "", ""]
   ];
-  // VALIDATION: Each row must have exactly 26 columns — abort if not
+  // VALIDATION: Each row must have exactly 27 columns — abort if not
   for (var i = 0; i < data.length; i++) {
-    if (data[i].length !== 26) {
-      Logger.log("ERROR: Row " + i + " has " + data[i].length + " columns, expected 26. Aborting.");
+    if (data[i].length !== 27) {
+      Logger.log("ERROR: Row " + i + " has " + data[i].length + " columns, expected 27. Aborting.");
       return;
     }
   }
   if (data.length > 0) {
     sheet.getRange(startRow, 1, data.length, data[0].length).setValues(data);
-    // Checkboxes: V=Applied(col22), W=Interview(col23), X=Referral(col24)
+    // Checkboxes: V=Networked(col22), W=Applied(col23), X=Interview(col24), Y=Referral(col25)
     sheet.getRange(startRow, 22, data.length, 1).insertCheckboxes();
     sheet.getRange(startRow, 23, data.length, 1).insertCheckboxes();
     sheet.getRange(startRow, 24, data.length, 1).insertCheckboxes();
+    sheet.getRange(startRow, 25, data.length, 1).insertCheckboxes();
     // Fix Posted Date format (col 9 = column I)
     sheet.getRange(startRow, 9, data.length, 1).setNumberFormat("@");
     var dates = data.map(function(r) { return [r[8]]; });
@@ -333,7 +338,7 @@ const code = `function addJobData() {
 editor.getModel().setValue(code);
 ```
 
-**AFTER injecting, BEFORE running**: Visually count the values in each data row to confirm exactly 26. The validation code will also abort if any row has the wrong count.
+**AFTER injecting, BEFORE running**: Visually count the values in each data row to confirm exactly 27. The validation code will also abort if any row has the wrong count.
 
 Then Ctrl+S to save, ▶ to run.
 
@@ -449,7 +454,7 @@ FAST_TRACK: Top 3 = Tier 1, rest = Tier 2. FULL_ANALYSIS: All APPLY NOW = Tier 1
 
 ## Relationship Table (NEW in v14)
 
-Include in the Summary Report. This is a logical view of CRM contacts — it does NOT modify the 26-column Google Sheet schema.
+Include in the Summary Report. This is a logical view of CRM contacts — it does NOT modify the 27-column Google Sheet schema.
 
 ```
 RELATIONSHIP TABLE — {M/D/YYYY}
@@ -513,6 +518,6 @@ NETWORKING PIPELINE — {M/D/YYYY}
   Conversion: REFERRAL_SECURED → INTERVIEW_STAGE: {X}%
 ```
 
-## Google Sheet — No Schema Changes (v14)
+## Google Sheet — Schema Changes (v16.9)
 
-The 26-column schema (A-Z) remains unchanged. All CRM, interview pipeline, and networking state data is stored in the preferences JSON file, NOT in the Google Sheet. The sheet continues to use the same columns as before. The `Stage` column (S), `Next Action` (T), `Next Action Date` (U), `Applied` (V), `Interview` (W), and `Referral` (X) columns are updated to reflect pipeline progress but no new columns are added.
+The schema has been expanded from 26 columns (A-Z) to 27 columns (A-AA) with the addition of the `Networked` column (V). All CRM, interview pipeline, and networking state data is stored in the preferences JSON file, NOT in the Google Sheet, but the sheet now includes the new `Networked` checkbox to track networking contact identification. The column order is: `Stage` (S), `Next Action` (T), `Next Action Date` (U), `Networked` (V), `Applied` (W), `Interview` (X), `Referral` (Y), `Resume Ver` (Z), and `JD Hash` (AA).

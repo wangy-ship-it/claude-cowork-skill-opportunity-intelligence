@@ -43,6 +43,18 @@ Use Enhanced Contextual Matching — don't reduce to keyword overlap. Score each
 - **Speed to Hire**: 90+ 1-2 weeks; 75-89 2-3 weeks; 60-74 3-6 weeks; 40-59 6-12 weeks; <40 3+ months
 - **ATS Friction**: 90+ frictionless; 75-89 easy; 60-74 standard; 40-59 difficult; <40 black hole
 
+### Comp-Relative Penalty (NEW in v16.5)
+
+Prevents low-comp roles from consuming networking bandwidth. Uses `minimum_salary_base` from candidate profile in preferences.
+
+| Condition | Effect |
+|-----------|--------|
+| `salary_max < minimum_salary_base × 0.85` | -15 Opp Score + note in Potential Gaps: "Comp {X}% below target" |
+| `salary_max < minimum_salary_base × 0.70` | auto-HOLD with note "Comp significantly below target — confirm before investing networking effort" |
+| Salary is "N/A" (e.g., Ch3 limitation) | No penalty, but note "Comp unknown — verify before applying" |
+
+This penalty applies AFTER the five-pillar calculation. It modifies the final Opportunity Score and can override Action Gate upward to HOLD if the 70% threshold is triggered.
+
 ## Interview Probability (0-100) — Conversion Likelihood
 
 Predicts actual callback. Independent of Fit and Opportunity.
@@ -70,6 +82,7 @@ Predicts actual callback. Independent of Fit and Opportunity.
 | Company intelligence modifier | -15 to +10 |
 | **Channel performance modifier** | -5 to +10 (from learning_loop.md) |
 | **Opportunity cluster modifier** | -5 to +5 (from cluster learning) |
+| **Early bird (posted <6 hours, freshness sweep)** | **+10** (v16.5 — see linkedin-browser.md Step 0) |
 
 ### Time-Based Decay (after base score)
 - 0-14 days: no adjustment
@@ -102,26 +115,73 @@ Compounds. Cap at 99.
 | Uplevel | Managing managers/VP/3+ teams | Director when SM | Good stretch |
 | Downlevel | IC-only for SM+ | One level below | Appropriate |
 
+### Company-Specific Title Mappings
+
+Some companies use non-standard titles that don't map obviously to industry levels. When scoring uplevel/downlevel risk, consult this mapping before defaulting to LOW.
+
+**Apple** uses a unique title ladder for data science:
+- "Data Scientist" / "Data Science Manager" → IC / Manager (ICT3-ICT5) → LOW uplevel risk
+- "Data Science Leader" → Senior Manager / Director-equivalent (ICT5-ICT6) → MED uplevel risk for SM candidates
+- **"Sr. Data Science Leader"** → Director / Sr. Director-equivalent (ICT6-ICT7) → **MED-HIGH uplevel risk** for SM candidates. Key signal: JD requires "5+ years managing managers" as a minimum qualification, which indicates a scope well above Senior Manager. If the JD explicitly requires managing managers or leading multiple teams, score as HIGH.
+- "Director, Data Science" (rare at Apple — they prefer "Leader" titles) → Director (ICT7+) → HIGH uplevel risk
+
+The distinction matters because Apple's "Leader" title sounds like a lateral move from Senior Manager, but the actual scope (managing managers, multi-team ownership) is Director-equivalent. Always check the JD for "managing managers" or "leading leaders" language when evaluating Apple roles — that's the strongest signal of true seniority.
+
 ## Action Gate — APPLY NOW / NETWORK FIRST / HOLD / SKIP
 
 | Action | Criteria |
 |--------|---------|
-| **APPLY NOW** | Strong networking path AND IP ≥ 60 AND Fit ≥ 70 AND Opp ≥ 65 |
-| **APPLY NOW (cold)** | No warm BUT Bucket A AND Fit ≥ 85 AND IP ≥ 75 AND Opp ≥ 70 |
+| **APPLY NOW (warm)** | Strong networking path AND IP ≥ 60 AND Fit ≥ 70 AND Opp ≥ 65 |
+| **APPLY NOW (cold)** | No warm BUT Bucket A AND Fit ≥ 85 AND **IP ≥ 55 (hard floor)** AND Opp ≥ 70 |
 | **NETWORK FIRST** | Moderate/Weak path AND Fit ≥ 70 AND Opp ≥ 65 AND IP ≥ 60 |
 | **HOLD** | IP 40-59 OR Fit 65-69 OR Opp 55-64 |
-| **SKIP** | IP < 40 OR Fit < 65 OR Opp < 55 OR blockers |
+| **HOLD — BORDERLINE** | Fit < 70 AND Opp ≥ 75 AND Bucket A (see § Borderline Review) |
+| **SKIP** | IP < 40 OR Fit < 55 (Bucket A w/ Opp < 75) / < 65 (other) OR Opp < 55 OR blockers |
 
-**Warm Channel Override**: All cold Bucket B → NETWORK FIRST. Override only if IP ≥ 80 AND Fit ≥ 85.
+### Cold APPLY NOW IP Floor (NEW in v16.5)
+
+**Hard rule**: If a role has NO warm channel (no Strong networking path), it CANNOT receive APPLY NOW unless IP ≥ 55. This floor is NOT subject to adaptive threshold lowering. The rationale is that cold applications with IP below 55 have near-zero conversion probability and waste application quota.
+
+- If IP < 55 AND no warm channel → max gate = NETWORK FIRST, with note: "Cold channel + IP {X} below floor — find referral to improve odds."
+- If IP ≥ 55 AND no warm channel → eligible for cold APPLY NOW (if other criteria met)
+- Warm channel (Strong path) overrides this floor: IP ≥ 50 with Strong path → eligible for APPLY NOW
+
+**Warm Channel Override**: All cold Bucket B → NETWORK FIRST. Override only if IP ≥ 80 AND Fit ≥ 85. Warm channel override applies above IP 50 (Strong path dramatically changes conversion).
 **Cooldown check**: Check `application_cooldowns` before APPLY NOW.
 **Guardrails check**: Verify against `references/guardrails.md` constraints before finalizing.
 
 ### Reasoning Requirement
 Each Action Gate assignment MUST include a reasoning block (see `references/decision_engine.md`).
 
+### Borderline Review — Catching High-Value Near-Misses (NEW in v16.8, UPDATED v16.10)
+
+The hard Fit 65/70 floor filters genuinely poor matches well, but it creates a cliff where a Fit 68 Director role at Pinterest paying $470K gets the same treatment as a Fit 40 role at a no-name startup. The Opportunity cost of missing a high-value role is asymmetric — a "stretch" at a top company is often worth more than a "perfect fit" at a weaker one.
+
+**v16.10 change**: Expanded from Fit 58-64 to Fit < 70 to catch roles like the Pinterest Director case (Fit 68, Opp 85) that fall just below NETWORK FIRST's Fit ≥ 70 threshold but have exceptional career-strategic value. These roles are too valuable for auto-HOLD without a flag.
+
+**When to apply** — ALL of these must be true:
+- Fit Score is **< 70** (below NETWORK FIRST threshold)
+- Opportunity Score ≥ 75 (significant career-strategic value)
+- Company is **Bucket A** (brand, comp, or growth justifies the stretch)
+
+**What happens**: Instead of plain HOLD or auto-SKIP, the role receives **HOLD — BORDERLINE** with a note:
+```
+⚡ BORDERLINE: Fit {X} below NETWORK FIRST floor (70) but Opp {Y} suggests high career value.
+   Gap analysis: {specific gaps from signal extraction}
+   Worth pursuing IF: {condition — e.g., "warm intro found", "gap is addressable"}
+   Auto-expires: {date 14 days out}
+```
+
+These roles aren't strong enough for blind networking investment, but too valuable to silently discard. The Borderline flag gives the human a chance to decide.
+
+**Guardrails**: Borderline does NOT lower the floor for APPLY NOW or NETWORK FIRST — only prevents premature SKIP/plain-HOLD. The role stays HOLD until the candidate actively pursues it (graduates to NETWORK FIRST with a fit-gap note) or expires after 14 days.
+
+**SKIP floor (Bucket A)**: Fit < 55 with Opp < 75 → SKIP. This is the absolute minimum — below this, even high Opp can't justify investment.
+
 ### Adaptive Thresholds
 - If <5 APPLY NOW → lower by 3, re-evaluate. Repeat once.
-- **Hard floors**: Fit 65, IP 50, Opp 55
+- **Hard floors**: Fit 55 (Bucket A w/ Opp < 75) / 65 (Bucket B/C), **IP 55 (for cold APPLY NOW)**, IP 50 (for NETWORK FIRST), Opp 55
+- Adaptive lowering can reduce thresholds to floors but NEVER below them
 - If still <5 at floor → accept count, **trigger company expansion**
 - If >10 → raise by 3, demote overflow
 
