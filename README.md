@@ -271,9 +271,9 @@ Scores combine into four action classifications:
 │                                                                             │
 │   ┌──────────────────────────────────────────────────────────┐              │
 │   │  RELATIONSHIP CRM                    INTERVIEW PIPELINE  │              │
-│   │  8-state pipeline                    Stage tracking       │             │
-│   │  Follow-up automation                Prep task generation │             │
-│   │  Strength transitions                Thank-you management │             │
+│   │  8-state pipeline                    Stage tracking      │              │
+│   │  Follow-up automation                Prep task generation│              │
+│   │  Strength transitions                Thank-you management│              │
 │   └──────────────────────────────────────────────────────────┘              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
