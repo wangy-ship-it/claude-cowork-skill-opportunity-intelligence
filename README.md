@@ -167,13 +167,13 @@ Natural language state machines give AI agents the same lifecycle guarantees as 
 ```
     ┌─────────────────────────────────────────────────┐
     │  HARD CONSTRAINTS (never violated)              │
-    │                                                  │
+    │                                                 │
     │  • Max 3 applications/day                       │
     │  • Max 2 outreach messages/week per company     │
     │  • Minimum Fit score 65 to apply                │
     │  • Cooldown enforcement between applications    │
     │  • Black hole detection (5+ apps, 0 interviews) │
-    │  • Protect application budgets at key companies  │
+    │  • Protect application budgets at key companies │
     └─────────────────────────────────────────────────┘
 
     Without guardrails, the agent optimizes for volume.
@@ -243,18 +243,18 @@ Scores combine into four action classifications:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       JOB SEARCH AI SKILL v16.11                            │
 │                                                                             │
-│   ┌───────────┐     ┌──────────────┐     ┌──────────────┐                  │
-│   │  DISCOVER │────►│   EVALUATE   │────►│     ACT      │                  │
-│   │           │     │              │     │              │                  │
-│   │ 4-channel │     │ Signal       │     │ APPLY NOW    │                  │
-│   │ search    │     │ extraction → │     │ NETWORK FIRST│                  │
-│   │           │     │ 3-score      │     │ HOLD         │                  │
-│   │ Career    │     │ system →     │     │ SKIP         │                  │
-│   │ LinkedIn  │     │ Action gates │     │              │                  │
-│   │ ATS/Bool  │     │              │     │ Action packs │                  │
-│   │ Recruiter │     │              │     │ CSV + Sheets │                  │
-│   │ Posts     │     │              │     │ CRM updates  │                  │
-│   └───────────┘     └──────────────┘     └──────┬───────┘                  │
+│   ┌───────────┐     ┌──────────────┐     ┌──────────────┐                   │
+│   │  DISCOVER │────►│   EVALUATE   │────►│     ACT      │                   │
+│   │           │     │              │     │              │                   │
+│   │ 4-channel │     │ Signal       │     │ APPLY NOW    │                   │
+│   │ search    │     │ extraction → │     │ NETWORK FIRST│                   │
+│   │           │     │ 3-score      │     │ HOLD         │                   │
+│   │ Career    │     │ system →     │     │ SKIP         │                   │
+│   │ LinkedIn  │     │ Action gates │     │              │                   │
+│   │ ATS/Bool  │     │              │     │ Action packs │                   │
+│   │ Recruiter │     │              │     │ CSV + Sheets │                   │
+│   │ Posts     │     │              │     │ CRM updates  │                   │
+│   └───────────┘     └──────────────┘     └──────┬───────┘                   │
 │         ▲                                        │                          │
 │         │              ┌─────────────┐           │                          │
 │         └──────────────│   LEARN     │◄──────────┘                          │
@@ -271,9 +271,9 @@ Scores combine into four action classifications:
 │                                                                             │
 │   ┌──────────────────────────────────────────────────────────┐              │
 │   │  RELATIONSHIP CRM                    INTERVIEW PIPELINE  │              │
-│   │  8-state pipeline                    Stage tracking       │              │
-│   │  Follow-up automation                Prep task generation │              │
-│   │  Strength transitions                Thank-you management │              │
+│   │  8-state pipeline                    Stage tracking       │             │
+│   │  Follow-up automation                Prep task generation │             │
+│   │  Strength transitions                Thank-you management │             │
 │   └──────────────────────────────────────────────────────────┘              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
